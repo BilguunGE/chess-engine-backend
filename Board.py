@@ -10,40 +10,22 @@ def makeField(row, col):
 
 class Board:
     ZERO_STRING = "0000000000000000000000000000000000000000000000000000000000000000"
-
-    RANK_1 = int(
-        "1111111100000000000000000000000000000000000000000000000000000000", 2)
-
-    RANK_2 = int(
-        "0000000011111111000000000000000000000000000000000000000000000000", 2)
-    RANK_3 = int(
-        "0000000000000000111111110000000000000000000000000000000000000000", 2)
-    RANK_4 = int(
-        "0000000000000000000000001111111100000000000000000000000000000000", 2)
-    RANK_5 = int(
-        "0000000000000000000000000000000011111111000000000000000000000000", 2)
-    RANK_6 = int(
-        "0000000000000000000000000000000000000000111111110000000000000000", 2)
-    RANK_7 = int(
-        "0000000000000000000000000000000000000000000000001111111100000000", 2)
-    RANK_8 = int(
-        "0000000000000000000000000000000000000000000000000000000011111111", 2)
-    RANK_H = int(
-        "1000000010000000100000001000000010000000100000001000000010000000", 2)
-    RANK_G = int(
-        "0100000001000000010000000100000001000000010000000100000001000000", 2)
-    RANK_F = int(
-        "0010000000100000001000000010000000100000001000000010000000100000", 2)
-    RANK_E = int(
-        "0001000000010000000100000001000000010000000100000001000000010000", 2)
-    RANK_D = int(
-        "0000100000001000000010000000100000001000000010000000100000001000", 2)
-    RANK_C = int(
-        "0000010000000100000001000000010000000100000001000000010000000100", 2)
-    RANK_B = int(
-        "0000001000000010000000100000001000000010000000100000001000000010", 2)
-    RANK_A = int(
-        "0000000100000001000000010000000100000001000000010000000100000001", 2)
+    RANK_1 = int("1111111100000000000000000000000000000000000000000000000000000000", 2)
+    RANK_2 = int("0000000011111111000000000000000000000000000000000000000000000000", 2)
+    RANK_3 = int("0000000000000000111111110000000000000000000000000000000000000000", 2)
+    RANK_4 = int("0000000000000000000000001111111100000000000000000000000000000000", 2)
+    RANK_5 = int("0000000000000000000000000000000011111111000000000000000000000000", 2)
+    RANK_6 = int("0000000000000000000000000000000000000000111111110000000000000000", 2)
+    RANK_7 = int("0000000000000000000000000000000000000000000000001111111100000000", 2)
+    RANK_8 = int("0000000000000000000000000000000000000000000000000000000011111111", 2)
+    RANK_H = int("1000000010000000100000001000000010000000100000001000000010000000", 2)
+    RANK_G = int("0100000001000000010000000100000001000000010000000100000001000000", 2)
+    RANK_F = int("0010000000100000001000000010000000100000001000000010000000100000", 2)
+    RANK_E = int("0001000000010000000100000001000000010000000100000001000000010000", 2)
+    RANK_D = int("0000100000001000000010000000100000001000000010000000100000001000", 2)
+    RANK_C = int("0000010000000100000001000000010000000100000001000000010000000100", 2)
+    RANK_B = int("0000001000000010000000100000001000000010000000100000001000000010", 2)
+    RANK_A = int("0000000100000001000000010000000100000001000000010000000100000001", 2)
     RANK_MAP = {
         'a': RANK_A,
         'b': RANK_B,
@@ -186,79 +168,85 @@ class Board:
 
         return newChessBoard
 
-    def getMovesW(self):
-        # including black king, because he can't be eaten
-        self.NOT_WHITE_PIECES = ~(
-            self.WP | self.WN | self.WB | self.WR | self.WQ | self.WK | self.BK)
-
-        # same here
+    def getMoves(self):
+        # exluding black king, because he can't be eaten
         self.BLACK_PIECES = self.BP | self.BN | self.BB | self.BR | self.BQ
 
-        # board with empty fields
-        self.EMPTY = ~(self.WP | self.WN | self.WB | self.WR | self.WQ |
-                       self.WK | self.BP | self.BN | self.BB | self.BR | self.BQ | self.BK)
-        return self.getMovesWP()
+        # same here
+        self.WHITE_PIECES = self.WP | self.WN | self.WB | self.WR | self.WQ
 
-    def getMovesWP(self):
+        # board with empty fields
+        self.EMPTY = ~(self.WP | self.WN | self.WB | self.WR | self.WQ |self.WK | self.BP | self.BN | self.BB | self.BR | self.BQ | self.BK)
+
+        return self.getMovesP()
+
+    def getMovesP(self):
         moves = []
+        x = 1
+        if not self.isWhiteTurn:
+            x = -1
 
         # beat left
-        PAWN_MOVES = (
-            self.WP >> 7) & self.BLACK_PIECES & ~self.RANK_1 & ~ self.RANK_A
+        PAWN_MOVES = (self.WP >> 7) & self.BLACK_PIECES & ~self.RANK_1 & ~ self.RANK_A
+        PAWN_MOVES_PROMO = (self.WP >> 7) & self.BLACK_PIECES & self.RANK_8 & ~self.RANK_A
 
-        PAWN_MOVES_PROMO = (
-            self.WP >> 7) & self.BLACK_PIECES & self.RANK_8 & ~self.RANK_A
+        if not self.isWhiteTurn:
+            PAWN_MOVES = (self.BP << 7) & self.WHITE_PIECES & ~self.RANK_8 & ~ self.RANK_H
+            PAWN_MOVES_PROMO = (self.BP << 7) & self.WHITE_PIECES & self.RANK_1 & ~self.RANK_H
 
         for i in range(64):
             move = {}
             if (PAWN_MOVES_PROMO >> i) & 1 == 1:
                 move['isPromo'] = True
             if (PAWN_MOVES >> i) & 1 == 1:
-                move['toString'] = makeField(math.floor(
-                    i/8)+1, (i % 8)-1) + "x" + makeField(math.floor(i/8), i % 8)
+                move['toString'] = makeField(math.floor(i/8)+(x*1), (i % 8)-(x*1)) + "x" + makeField(math.floor(i/8), i % 8)
                 move['isHit'] = True
                 moves.append(move)
 
         # beat right
-        PAWN_MOVES = (
-            self.WP >> 9) & self.BLACK_PIECES & ~self.RANK_1 & ~ self.RANK_H
+        PAWN_MOVES = (self.WP >> 9) & self.BLACK_PIECES & ~self.RANK_1 & ~ self.RANK_H
+        PAWN_MOVES_PROMO = (self.WP >> 9) & self.BLACK_PIECES & self.RANK_8 & ~self.RANK_H
 
-        PAWN_MOVES_PROMO = (
-            self.WP >> 9) & self.BLACK_PIECES & self.RANK_8 & ~self.RANK_H
+        if not self.isWhiteTurn:
+            PAWN_MOVES = (self.BP << 9) & self.WHITE_PIECES & ~self.RANK_8 & ~ self.RANK_A
+            PAWN_MOVES_PROMO = (self.BP << 9) & self.WHITE_PIECES & self.RANK_1 & ~self.RANK_A
 
         for i in range(64):
             move = {}
             if (PAWN_MOVES_PROMO >> i) & 1 == 1:
                 move['isPromo'] = True
             if (PAWN_MOVES >> i) & 1 == 1:
-                move['toString'] = makeField(math.floor(
-                    i/8)+1, (i % 8)-1) + "x"+makeField(math.floor(i/8), i % 8)
+                move['toString'] = makeField(math.floor(i/8)+(x*1), (i % 8)-(x*1)) + "x"+makeField(math.floor(i/8), i % 8)
                 move['isHit'] = True
                 moves.append(move)
 
         # move 1 forward
         PAWN_MOVES = (self.WP >> 8) & self.EMPTY & ~self.RANK_1
         PAWN_MOVES_PROMO = (self.WP >> 8) & self.EMPTY & self.RANK_8
-        print(format(self.WP, 'b'), "??")
+
+        if not self.isWhiteTurn:
+            PAWN_MOVES = (self.BP << 8) & self.EMPTY & ~self.RANK_8
+            PAWN_MOVES_PROMO = (self.BP << 8) & self.EMPTY & self.RANK_1
 
         for i in range(64):
             move = {}
             if (PAWN_MOVES_PROMO >> i) & 1 == 1:
                 move['isPromo'] = True
             if (PAWN_MOVES >> i) & 1 == 1:
-                move['toString'] = makeField(math.floor(
-                    i/8)+1, (i % 8)) + "-"+makeField(math.floor(i/8), i % 8)
+                move['toString'] = makeField(math.floor(i/8)+(x*1), (i % 8)) + "-"+makeField(math.floor(i/8), i % 8)
                 move['isHit'] = False
                 moves.append(move)
 
         # move 2 forward
-        PAWN_MOVES = (self.WP >> 16) & self.EMPTY & (
-            self.EMPTY >> 8) & self.RANK_4
+        PAWN_MOVES = (self.WP >> 16) & self.EMPTY & (self.EMPTY >> 8) & self.RANK_4
+    
+        if not self.isWhiteTurn:
+            PAWN_MOVES = (self.BP << 16) & self.EMPTY & (self.EMPTY << 8) & self.RANK_5
+
         for i in range(64):
             move = {}
             if (PAWN_MOVES >> i) & 1 == 1:
-                move['toString'] = makeField(math.floor(
-                    i/8)+2, (i % 8)) + "-"+makeField(math.floor(i/8), i % 8)
+                move['toString'] = makeField(math.floor(i/8)+(x*2), (i % 8)) + "-"+makeField(math.floor(i/8), i % 8)
                 move['isHit'] = False
                 moves.append(move)
 
@@ -266,27 +254,29 @@ class Board:
             RANK = self.RANK_MAP[self.enPassant[0]]
 
             # en passant left
-            PAWN_MOVES = (
-                self.WP << 1) & self.BP & self.RANK_5 & ~self.RANK_A & RANK
+            PAWN_MOVES = (self.WP << 1) & self.BP & self.RANK_5 & ~self.RANK_A & RANK
+            
+            if not self.isWhiteTurn:
+                PAWN_MOVES = (self.BP >> 1) & self.WP & self.RANK_4 & ~self.RANK_H & RANK
 
             for i in range(64):
                 move = {}
-
-                if PAWN_MOVES >> i == 1:
-                    move['toString'] = makeField(
-                        math.floor(i/8), i % 8-1)+'x'+self.enPassant
+                if (PAWN_MOVES >> i)&1 == 1:
+                    move['toString'] = makeField(math.floor(i/8), i % 8-(x*1))+'x'+self.enPassant
                     move['isHit'] = True
                     move['enPassant'] = True
                     moves.append(move)
 
             # en passant right
-            PAWN_MOVES = (
-                self.WP >> 1) & self.BP & self.RANK_5 & ~self.RANK_H & RANK
+            PAWN_MOVES = (self.WP >> 1) & self.BP & self.RANK_5 & ~self.RANK_H & RANK
+
+            if not self.isWhiteTurn:
+                PAWN_MOVES = (self.BP << 1) & self.WP & self.RANK_4 & ~self.RANK_A & RANK
+
             for i in range(64):
                 move = {}
-                if PAWN_MOVES >> i == 1:
-                    move['toString'] = makeField(
-                        math.floor(i/8), i % 8+1)+'x'+self.enPassant
+                if (PAWN_MOVES >> i)&1 == 1:
+                    move['toString'] = makeField(math.floor(i/8), i % 8+(x*1))+'x'+self.enPassant
                     move['isHit'] = True
                     move['enPassant'] = True
                     moves.append(move)
