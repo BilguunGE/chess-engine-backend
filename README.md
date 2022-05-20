@@ -15,5 +15,7 @@ venv\Scripts\activate.bat
 ```
 run flask in the (venv) terminal:
 ```
+export FLASK_APP=server
+export FLASK_ENV=development
 flask run
 ```
