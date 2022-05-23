@@ -15,10 +15,10 @@ def allMovesGen():
             if x == 1:
                 newMoves = np.append(newMoves, np.uint64(1 << ((x+2)*8+y)))
                 _newMoves_ |= np.uint64(1 << ((x+2)*8+y))
-            if y > 0:
+            if y > 0 and x < 7:
                 possibleCatches = np.append(possibleCatches, np.uint64(1 << ((x+1)*8+y-1)))
                 _possibleCatches_ |= np.uint64(1 << ((x+1)*8+y-1))
-            if y < 7:
+            if y < 7 and x < 7:
                 possibleCatches = np.append(possibleCatches, np.uint64(1 << ((x+1)*8+y+1)))
                 _possibleCatches_ |= np.uint64(1 << ((x+1)*8+y+1))
             if x < 7:
@@ -37,10 +37,10 @@ def allMovesGen():
             possibleCatches = np.array(0,dtype=np.uint64)
             _newMoves_ = np.uint64(0)
             _possibleCatches_ = np.uint64(0)
-            if y > 0:
+            if y > 0 and x > 0:
                 possibleCatches = np.append(possibleCatches, np.uint64(1 << ((x-1)*8+y-1)))
                 _possibleCatches_ |= np.uint64(1 << ((x-1)*8+y-1))
-            if y < 7:
+            if y < 7 and x > 0:
                 possibleCatches = np.append(possibleCatches, np.uint64(1 << ((x-1)*8+y+1)))
                 _possibleCatches_ |= np.uint64(1 << ((x-1)*8+y+1))
             if x == 6:
