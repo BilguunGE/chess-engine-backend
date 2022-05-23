@@ -9,7 +9,7 @@ def fieldToString(field: np.uint64):
     txt = 'abcdefgh'[int(7-x)] + '12345678'[int(y)]
     return txt
 
-def toNumber(field: np.uint64):
+def toNumber(field):
     field = np.ceil(np.log2(field)).astype(int)
     return field
 
@@ -37,5 +37,5 @@ def attacked(board,enemy,white,field):
     return np.uint64(0)
 
 def inCheck(board,color,enemy,white):
-    kingN = board.king & color
-    return attacked(board,enemy,white,kingN.bit_length() - 1)
+    kingN = np.max(board.king & color)
+    return attacked(board,enemy,white,toNumber(kingN))
