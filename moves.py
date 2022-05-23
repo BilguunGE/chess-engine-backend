@@ -179,7 +179,7 @@ def allMovesGen():
             if x < 6 and y < 7:
                 newMoves = np.append(newMoves, np.uint64(1 << ((x+2)*8 + y+1)))
                 _newMoves_ |= np.uint64(1 << ((x+2)*8 + y+1))
-            movesH.append(np.uint64(1 << (x*8+y),newMoves,_newMoves_))
+            movesH.append(np.uint64(1 << (x*8+y)),newMoves,_newMoves_)
             y += 1
         x += 1
     moves.append(movesH)
