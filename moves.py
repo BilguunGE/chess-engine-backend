@@ -225,7 +225,7 @@ def allShadowsGen():
                         y2 += 1
                 newShadows[(x*8+y1)] = _shadows_
                 y1 = (y1 + 1) % 8
-            shadowsH.append(np.uint64(1 << (x*8+y),newShadows))
+            shadowsH.append(np.uint64(1 << (x*8+y)),newShadows)
             y += 1
         x += 1
     shadows.append(shadowsH)
@@ -287,7 +287,7 @@ def allShadowsGen():
                     x2 -= 1
                     y2 += 1
                 newShadows[(x1*8+y1)] = _shadows_
-            shadowsH.append(np.uint64(1 << (x*8+y),newShadows))
+            shadowsH.append(np.uint64(1 << (x*8+y)),newShadows)
             y += 1
         x += 1
     shadows.append(shadowsH)
