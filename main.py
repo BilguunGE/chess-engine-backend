@@ -181,62 +181,62 @@ def getMoves(board,color,enemy,white):
         checkFilter = between[toNumber(attacker) - 1][(board.king & color).bit_length() - 1] | attacker | (board.king & color)
     moves.extend(getRookMoves(board,color,enemy,allPinned,checkFilter))
     moves.extend(getBishopMoves(board,color,enemy,allPinned,checkFilter))
-    moves.extend(getPawnMoves(board,color,allPinned,white,checkFilter))
+    moves.extend(getPawnMoves(board,color,enemy,allPinned,white,checkFilter))
     moves.extend(getKnightMoves(board,color,allPinned,checkFilter))
     moves.extend(getKingMoves(board,color,enemy,white))
     moves.extend(getQueenMoves(board,color,enemy,allPinned,checkFilter))
     return moves
 
-def getPawnMoves(board,color,allPinned,white,checkFilter):
+def getPawnMoves(board,color,enemy,allPinned,white,checkFilter):
     moves = []
     if white:
-        for n in bits(board.pawn & color):
-            possibleMoves = allMoves[1][n]
-            possibleCatches = possibleMoves[1][1]
-            catches = possibleCatches & (board.black | board.en_passant)
-            shadowPieces = possibleMoves[1][0] & board.all
-            newMoves = ((possibleMoves[1][0] & ~shadowPieces& ~(shadowPieces>>8)) | catches) & checkFilter
-            if newMoves:
-                if allPinned & 1 << n:
-                    king = color & board.king
-                    kingNumber = king.bit_length() - 1
-                    place = 1 << n
-                    for i in bits(newMoves):
-                        if (between[n][kingNumber] & 1 << i) or (between[kingNumber][i] & place):
-                            moves.append((possibleMoves[0],1 << i,0,(possibleMoves[0]>>16==1<<i),0,0))
+        for n in (board.pawn & color):
+            pieceFieldNumber = toNumber(n)
+            possibleMoves = allMoves[1][pieceFieldNumber][1][0]
+            possibleCatches = allMoves[1][pieceFieldNumber][1][1]
+            catches = possibleCatches & (enemy | board.en_passant)
+            shadowPieces = possibleMoves & board.all
+            newMoves = ((possibleMoves & ~shadowPieces & ~(shadowPieces>>8)) | catches) & checkFilter
+            if np.any(newMoves):
+                if np.any(allPinned & np.uint64(1 << pieceFieldNumber)):
+                    king = np.max(color & board.king)
+                    kingNumber = toNumber(king)
+                    if (between[n][kingNumber] & newMoves) or (between[kingNumber][toNumber(newMoves)] & n):
+                        for i in newMoves[np.nonzero(newMoves)]:
+                            moves.append((n,i,0,(n>>16==i),0,0))
                 else:
-                    promomations = newMoves & whitePromotions
-                    for i in bits(promomations):
+                    promotions = newMoves & whitePromotions
+                    for i in promotions(np.nonzero(promotions)):
                         x = 0
                         while x < 3:
-                            moves.append((possibleMoves[0],1 << i,0,False,False,1<<x))
-                    newMoves = newMoves & ~promomations
-                    for i in bits(newMoves):
-                        moves.append((possibleMoves[0],1 << i,0,(possibleMoves[0]<<16==1<<i),0,0))
+                            moves.append((possibleMoves[0],i,0,False,False,np.uint(1<<x)))
+                    newMoves = newMoves & ~promotions
+                    for i in newMoves(np.nonzero(newMoves)):
+                        moves.append((n,i,0,(n<<16==i),0,0))
     else:
-        for n in bits(board.pawn & color):
-            possibleMoves = allMoves[0][n]
-            possibleCatches = possibleMoves[1][1]
-            catches = possibleCatches & (board.white | board.en_passant)
-            shadowPieces = possibleMoves[1][0] & board.all
-            newMoves = ((possibleMoves[1][0] & ~shadowPieces & ~(shadowPieces<<8)) | catches) & checkFilter
-            if newMoves:
-                if allPinned & 1 << n:
-                    king = color & board.king
-                    kingNumber = king.bit_length() - 1
-                    place = 1 << n
-                    for i in bits(newMoves):
-                        if (between[n][kingNumber] & 1 << i) or (between[kingNumber][i] & place):
-                            moves.append((possibleMoves[0],1 << i,0,(possibleMoves[0]<<16==1<<i),0,0))
+        for n in (board.pawn & color):
+            pieceFieldNumber = toNumber(n)
+            possibleMoves = allMoves[0][pieceFieldNumber][1][0]
+            possibleCatches = allMoves[0][pieceFieldNumber][1][1]
+            catches = possibleCatches & (enemy | board.en_passant)
+            shadowPieces = possibleMoves & board.all
+            newMoves = ((possibleMoves & ~shadowPieces & ~(shadowPieces<<8)) | catches) & checkFilter
+            if np.any(newMoves):
+                if np.any(allPinned & n):
+                    king = np.max(color & board.king)
+                    kingNumber = toNumber(king)
+                    if (between[n][kingNumber] & newMoves) or (between[kingNumber][toNumber(newMoves)] & n):
+                        for i in newMoves[np.nonzero(newMoves)]:
+                            moves.append((n,i,0,(n<<16==i),0,0))
                 else:
-                    promomations = newMoves & whitePromotions
-                    for i in bits(promomations):
+                    promotions = newMoves & whitePromotions
+                    for i in promotions(np.nonzero(promotions)):
                         x = 0
                         while x < 3:
-                            moves.append((possibleMoves[0],1 << i,0,False,0,1<<x))
-                    newMoves = newMoves & ~promomations
-                    for i in bits(newMoves):
-                        moves.append((possibleMoves[0],1 << i,0,(possibleMoves[0]<<16==1<<i),0,0))
+                            moves.append((possibleMoves[0],i,0,False,0,np.uint(1<<x)))
+                    newMoves = newMoves & ~promotions
+                    for i in newMoves(np.nonzero(newMoves)):
+                        moves.append((n,i,0,(n<<16==i),0,0))
     return moves
 
 def getRookMoves(board,color,enemy,allPinned,checkFilter):
