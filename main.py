@@ -8,8 +8,8 @@ blackPromotions = np.uint64(255)
 max = 'w'
 
 class Board:
-    def __init__(self, all: np.uint64, pawn: np.array(dtype=np.uint64), rook: np.array(dtype=np.uint64), knight: np.array(dtype=np.uint64), bishop: np.array(dtype=np.uint64), queen: np.array(dtype=np.uint64),
-                 king: np.array(dtype=np.uint64), black: np.uint64, white: np.uint64, castle: np.uint8, en_passant: np.uint64, halfmove: int, fullmove: int, player=True):
+    def __init__(self, all: np.uint64, pawn: np.array, rook: np.array, knight: np.array, bishop: np.array, queen: np.array,
+                 king: np.array, black: np.uint64, white: np.uint64, castle: np.uint8, en_passant: np.uint64, halfmove: int, fullmove: int, player=True):
         self.all = all
         self.pawn = pawn
         self.rook = rook

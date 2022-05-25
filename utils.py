@@ -20,20 +20,25 @@ def bits(fields: np.uint64):
         fields ^= b
 
 def attacked(board,enemy,white,field):
-    if np.all(enemy & board.knight & allMoves[5][field][2]):
-        return enemy & board.knight & allMoves[5][field][2]
-    if np.all(enemy & board.king & allMoves[4][field][2]):
-        return enemy & board.king & allMoves[4][field][2]
-    if np.all(white and (enemy & board.pawn & allMoves[0][field][2][1])):
-        return enemy & board.pawn & allMoves[0][field][2][1]
-    if np.all(not white and (enemy & board.pawn & allMoves[1][field][2][1])):
-        return enemy & board.pawn & allMoves[1][field][2][1]
-    attackers = (allMoves[2][field][2] & (board.queen | board.rook) & enemy) | (allMoves[3][field][2] & (board.queen | board.bishop) & enemy) 
-    for i in attackers:
-        if i:
-            blockers = between[field][toNumber(i)] & board.all
+    attackers = np.array([],dtype=np.uint64)
+    if np.any(enemy & board.knight & allMoves[5][field][2]):
+        x = enemy & board.knight & allMoves[5][field][2]
+        attackers = np.append(attackers, x[np.nonzero(x)])
+    if np.any(enemy & board.king & allMoves[4][field][2]):
+        x = np.any(enemy & board.king & allMoves[4][field][2])
+        attackers = np.append(attackers, x[np.nonzero(x)])
+    if np.any(white and (enemy & board.pawn & allMoves[0][field][2][1])):
+        x = enemy & board.pawn & allMoves[0][field][2][1]
+        attackers = np.append(attackers, x[np.nonzero(x)])
+    if np.any(not white and (enemy & board.pawn & allMoves[1][field][2][1])):
+        x = enemy & board.pawn & allMoves[1][field][2][1]
+        attackers = np.append(attackers, x[np.nonzero(x)])
+    attackerPieces = (allMoves[2][field][2] & (board.queen | board.rook) & enemy) | (allMoves[3][field][2] & (board.queen | board.bishop) & enemy) 
+    if np.any(attackerPieces):
+        if x:
+            blockers = between[field][toNumber(x)] & board.all
         if not blockers:
-            return i
+            attackers = np.append(x)
     return np.uint64(0)
 
 def inCheck(board,color,enemy,white):
