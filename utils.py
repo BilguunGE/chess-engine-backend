@@ -44,3 +44,72 @@ def attacked(board,enemy,white,field):
 def inCheck(board,color,enemy,white):
     kingN = np.max(board.king & color)
     return attacked(board,enemy,white,toNumber(kingN))
+
+def toFen(board):
+    boardTxt = ['-']*64
+    for n in board.pawn:
+        boardTxt[toNumber(n)] = 'p'
+    for n in board.rook:
+        boardTxt[toNumber(n)] = 'r'
+    for n in board.knight:
+        boardTxt[toNumber(n)] = 'n'
+    for n in board.bishop:
+        boardTxt[toNumber(n)] = 'b'
+    for n in board.queen:
+        boardTxt[toNumber(n)] = 'q'
+    for n in board.king:
+        boardTxt[toNumber(n)] = 'k'
+    for n in bits(board.white):
+        boardTxt[n] = boardTxt[n].upper()
+    fen = ''
+    x = 0
+    i = 0
+    while x < 8:
+        y = 0
+        while y < 8:
+            if boardTxt[x*8+y] == '-':
+                i += 1
+            else:
+                if i != 0:
+                    fen += str(i)
+                fen += boardTxt[x*8+y]
+                i = 0
+            if y == 7 and i != 0:
+                fen += str(i)
+                i = 0
+            y += 1
+        if x != 7:
+            fen += '/'
+        x += 1
+    fen += ' '
+
+    if board.player:
+        fen += 'w'
+    else:
+        fen += 'b'
+    fen += ' '
+
+    if board.castle:
+        if 1 & board.castle:
+            fen += 'K'
+        if 2 & board.castle:
+            fen += 'Q'
+        if 4 & board.castle:
+            fen += 'k'
+        if 8 & board.castle:
+            fen += 'q'
+    else:
+        fen += '-'
+    fen += ' '
+
+    if board.en_passant:
+        i = toNumber(board.en_passant)
+        y = (i % 8)
+        x = 8 - ((i - y) / 8)
+        fen += chr(y + 97) + str(x)
+    else:
+        fen += '-'
+    fen += ' '
+
+    fen += str(board.halfmove) + ' ' + str(board.fullmove)
+    return fen
