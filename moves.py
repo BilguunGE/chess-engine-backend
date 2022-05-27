@@ -192,7 +192,7 @@ def allShadowsGen():
     while x < 8:
         y = 0
         while y < 8:
-            newShadows = [-1]*64
+            newShadows = np.array([np.uint64(0)]*64)
             x1 = (x + 1) % 8
             y1 = (y + 1) % 8
             while x1 != x:
@@ -225,7 +225,7 @@ def allShadowsGen():
                         y2 += 1
                 newShadows[(x*8+y1)] = _shadows_
                 y1 = (y1 + 1) % 8
-            shadowsH.append((np.uint64(1 << (x*8+y)),newShadows))
+            shadowsH.append(newShadows)
             y += 1
         x += 1
     shadows.append(shadowsH)
@@ -236,7 +236,7 @@ def allShadowsGen():
         while y < 8:
             x1 = x
             y1 = y
-            newShadows = [-1]*64
+            newShadows = np.array([np.uint64(0)]*64)
             while x1 < 7 and y1 < 7:
                 _shadows_ = np.uint64(0)
                 x1 += 1
@@ -287,7 +287,7 @@ def allShadowsGen():
                     x2 -= 1
                     y2 += 1
                 newShadows[(x1*8+y1)] = _shadows_
-            shadowsH.append((np.uint64(1 << (x*8+y)),newShadows))
+            shadowsH.append(newShadows)
             y += 1
         x += 1
     shadows.append(shadowsH)

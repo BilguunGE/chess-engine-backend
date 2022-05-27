@@ -113,3 +113,6 @@ def toFen(board):
 
     fen += str(board.halfmove) + ' ' + str(board.fullmove)
     return fen
+
+def nonzeroElements(array):
+    return array[np.nonzero(array)]
