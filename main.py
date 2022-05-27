@@ -8,8 +8,8 @@ blackPromotions = np.uint64(255)
 max = 'w'
 
 class Board:
-    def __init__(self, all: np.uint64, pawn: np.array, rook: np.array, knight: np.array, bishop: np.array, queen: np.array,
-                 king: np.array, black: np.uint64, white: np.uint64, castle: np.uint8, en_passant: np.uint64, halfmove: int, fullmove: int, player=True):
+    def __init__(self, all: np.uint64, pawn: np.ndarray, rook: np.ndarray, knight: np.ndarray, bishop: np.ndarray, queen: np.ndarray,
+                 king: np.ndarray, black: np.uint64, white: np.uint64, castle: np.uint8, en_passant: np.uint64, halfmove: int, fullmove: int, player=True):
         self.all = all
         self.pawn = pawn
         self.rook = rook
@@ -25,7 +25,7 @@ class Board:
         self.fullmove = fullmove
         self.player = player
         
-def getFen(fen):
+def getFen(fen: str):
     info = fen.split()
     board = getBoard(info)
     if info[1] == 'w':
@@ -42,7 +42,7 @@ def getFen(fen):
     print(moves)
     return moves ##toFen(doMove(board,moves[0][0],moves[0][1],moves[0][2],moves[0][3],moves[0][4],moves[0][5]))
 
-def getBoard(fen):
+def getBoard(fen: list[str]):
     fenArray = fen[0].split('/')
     all = np.uint64(0)
     pawn = np.array([],dtype=np.uint64)
@@ -100,7 +100,7 @@ def getBoard(fen):
     board = Board(all,pawn,rook,knight,bishop,queen,king,black,white,castle, en_passant, int(fen[4]), int(fen[5]))
     return board
 
-def getMoves(board,color,enemy,white):
+def getMoves(board: Board, color: np.uint64, enemy: np.uint64, white: bool):
     moves = []
     allPinned = np.uint64(0)
     ##allPinned = pinned(board,color,enemy)
@@ -113,10 +113,10 @@ def getMoves(board,color,enemy,white):
     moves.extend(getPawnMoves(board,color,enemy,allPinned,white,checkFilter))
     moves.extend(getKnightMoves(board,color,allPinned,checkFilter))
     ##moves.extend(getKingMoves(board,color,enemy,white))
-    ##moves.extend(getQueenMoves(board,color,enemy,allPinned,checkFilter))
+    moves.extend(getQueenMoves(board,color,enemy,allPinned,checkFilter))
     return moves
 
-def getPawnMoves(board,color,enemy,allPinned,white,checkFilter):
+def getPawnMoves(board: Board, color: np.uint64, enemy: np.uint64, allPinned: np.uint64 ,white: bool,checkFilter: np.uint64):
     moves = []
     if white:
         for n in nonzeroElements(board.pawn & color):
@@ -171,7 +171,7 @@ def getPawnMoves(board,color,enemy,allPinned,white,checkFilter):
                         moves.append((n,i,np.uint64(0),(n<<np.uint64(16)==i),np.uint64(0),np.uint64(0)))
     return moves
 
-def getRookMoves(board,color,enemy,allPinned,checkFilter):
+def getRookMoves(board: Board, color: np.uint64, enemy: np.uint64, allPinned: np.uint64, checkFilter: np.uint64):
     moves = []
     for n in nonzeroElements(board.rook & color):
         pieceFieldNumber = toNumber(n)
@@ -195,7 +195,7 @@ def getRookMoves(board,color,enemy,allPinned,checkFilter):
                     moves.append((n,i,np.uint64(1),False,np.uint64(0),np.uint64(0)))
     return moves
 
-def getBishopMoves(board,color,enemy,allPinned,checkFilter):
+def getBishopMoves(board: Board, color: np.uint64, enemy: np.uint64, allPinned: np.uint64, checkFilter: np.uint64):
     moves = []
     for n in nonzeroElements(board.bishop & color):
         pieceFieldNumber = toNumber(n)
@@ -219,7 +219,7 @@ def getBishopMoves(board,color,enemy,allPinned,checkFilter):
                     moves.append((n,i,np.uint64(4),False,np.uint64(0),np.uint64(0)))
     return moves
 
-def getKnightMoves(board,color,allPinned,checkFilter):
+def getKnightMoves(board: Board, color: np.uint64, allPinned: np.uint64, checkFilter: np.uint64):
     moves = []
     for n in nonzeroElements(board.knight & color):
         pieceFieldNumber = toNumber(n)
@@ -239,7 +239,7 @@ def getKnightMoves(board,color,allPinned,checkFilter):
                     moves.append((n,i,np.uint64(2),False,np.uint64(0),np.uint64(0)))
     return moves
 
-def getKingMoves(board,color,enemy,white):
+def getKingMoves(board: Board, color: np.uint64, enemy: np.uint64, white: bool):
     moves = []
     for n in bits(board.king & color):
         possibleMoves = allMoves[4][n]
@@ -266,54 +266,48 @@ def getKingMoves(board,color,enemy,white):
                             moves.append((kingF,kingF>>2,16,False,8,0))
     return moves
 
-def getQueenMoves(board,color,enemy,allPinned,checkFilter):
+def getQueenMoves(board: Board, color: np.uint64, enemy: np.uint64, allPinned: np.uint64, checkFilter: np.uint64):
     moves = []
-    for n in bits(board.queen & color):
-        possibleMoves = allMoves[2][n]
-        whiteShadowPieces = possibleMoves[1] & color
-        whiteShadows = 0
-        for i in bits(whiteShadowPieces):
-            whiteShadows |= allShadows[0][n][1][i]
-        newMoves = (possibleMoves[1] & ~(whiteShadows | whiteShadowPieces)) & checkFilter
-        if newMoves:
-            blackShadowPieces = newMoves & enemy
-            blackShadows = 0
-            for i in bits(blackShadowPieces):
-                blackShadows |= allShadows[0][n][1][i]
-            newMoves &= ~blackShadows
-            if allPinned & 1 << n:
-                    king = color & board.king
-                    kingNumber = king.bit_length() - 1
-                    place = 1 << n
-                    for i in bits(newMoves):
-                        if (between[n][kingNumber] & 1 << i) or (between[kingNumber][i] & place):
-                            moves.append((possibleMoves[0],1 << i,8,False,0,0))
+    for n in nonzeroElements(board.queen & color):
+        pieceFieldNumber = toNumber(n)
+        possibleMoves = allMoves[2][pieceFieldNumber][1]
+        colorShadowPieces = nonzeroElements(possibleMoves & color)
+        colorShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(colorShadowPieces)])
+        newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
+        if np.any(newMoves):
+            enemyShadowPieces = nonzeroElements(newMoves & enemy)
+            enemyShadows = np.bitwise_or.reduce(allShadows[0][n][toNumber(enemyShadowPieces)])
+            newMoves &= ~enemyShadows
+            newMoves = nonzeroElements(newMoves)
+            if allPinned & n:
+                    king = nonzeroElements(color & board.king)
+                    kingNumber = toNumber(king)
+                    for i in newMoves:
+                        if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
+                            moves.append((n,i,np.uint64(8),False,np.uint64(0),np.uint64(0)))
             else:
-                for i in bits(newMoves):
-                    moves.append((possibleMoves[0],1 << i,8,False,0,0))
-    for n in bits(board.queen & color):
-        possibleMoves = allMoves[3][n]
-        whiteShadowPieces = possibleMoves[1] & color
-        whiteShadows = 0
-        for i in bits(whiteShadowPieces):
-            whiteShadows |= allShadows[1][n][1][i]
-        newMoves = (possibleMoves[1] & ~(whiteShadows | whiteShadowPieces)) & checkFilter
-        if newMoves:
-            blackShadowPieces = newMoves & enemy
-            blackShadows = 0
-            for i in bits(blackShadowPieces):
-                blackShadows |= allShadows[1][n][1][i]
-            newMoves &= ~blackShadows
-            if allPinned & 1 << n:
-                    king = color & board.king
-                    kingNumber = king.bit_length() - 1
-                    place = 1 << n
-                    for i in bits(newMoves):
-                        if (between[n][kingNumber] & 1 << i) or (between[kingNumber][i] & place):
-                            moves.append((possibleMoves[0],1 << i,8,False,0,0))
+                for i in newMoves:
+                    moves.append((n,i,np.uint64(8),False,np.uint64(0),np.uint64(0)))
+    for n in nonzeroElements(board.queen & color):
+        pieceFieldNumber = toNumber(n)
+        possibleMoves = allMoves[3][pieceFieldNumber][1]
+        colorShadowPieces = nonzeroElements(possibleMoves & color)
+        colorShadows = np.bitwise_or.reduce(allShadows[1][pieceFieldNumber][toNumber(colorShadowPieces)])
+        newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
+        if np.any(newMoves):
+            enemyShadowPieces = nonzeroElements(newMoves & enemy)
+            enemyShadows = np.bitwise_or.reduce(allShadows[1][n][toNumber(enemyShadowPieces)])
+            newMoves &= ~enemyShadows
+            newMoves = nonzeroElements(newMoves)
+            if allPinned & n:
+                    king = nonzeroElements(color & board.king)
+                    kingNumber = toNumber(king)
+                    for i in newMoves:
+                        if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
+                            moves.append((n,i,np.uint64(8),False,np.uint64(0),np.uint64(0)))
             else:
-                for i in bits(newMoves):
-                    moves.append((possibleMoves[0],1 << i,8,False,0,0))
+                for i in newMoves:
+                    moves.append((n,i,np.uint64(8),False,np.uint64(0),np.uint64(0)))
     return moves
 
 def doMove(board,fromField,toField,piece,en_passant,castle,promotion):
