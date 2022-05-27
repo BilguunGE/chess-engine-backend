@@ -25,9 +25,6 @@ class Board:
         self.fullmove = fullmove
         self.player = player
         
-def setMax(newMax):
-    max = newMax
-
 def getFen(fen):
     info = fen.split()
     board = getBoard(info)
@@ -40,7 +37,6 @@ def getFen(fen):
         board.player = False
         color = board.black
         enemy = board.white
-    print(board.rook)
     moves = getMoves(board,color,enemy,white)
     print(len(moves))
     print(moves)
@@ -113,9 +109,9 @@ def getMoves(board,color,enemy,white):
     ##if inCheck(board,color,enemy,white):
         ##checkFilter = between[toNumber(attacker) - 1][(board.king & color).bit_length() - 1] | attacker | (board.king & color)
     moves.extend(getRookMoves(board,color,enemy,allPinned,checkFilter))
-    ##moves.extend(getBishopMoves(board,color,enemy,allPinned,checkFilter))
+    moves.extend(getBishopMoves(board,color,enemy,allPinned,checkFilter))
     moves.extend(getPawnMoves(board,color,enemy,allPinned,white,checkFilter))
-    ##moves.extend(getKnightMoves(board,color,allPinned,checkFilter))
+    moves.extend(getKnightMoves(board,color,allPinned,checkFilter))
     ##moves.extend(getKingMoves(board,color,enemy,white))
     ##moves.extend(getQueenMoves(board,color,enemy,allPinned,checkFilter))
     return moves
@@ -179,73 +175,68 @@ def getRookMoves(board,color,enemy,allPinned,checkFilter):
     moves = []
     for n in nonzeroElements(board.rook & color):
         pieceFieldNumber = toNumber(n)
-        possibleMovesArray = allMoves[2][pieceFieldNumber][1]
-        possibleMovesBit = allMoves[2][pieceFieldNumber][2]
-        colorShadowPieces = possibleMovesArray & color
-        colorShadowPieces = colorShadowPieces[np.nonzero(colorShadowPieces)]
+        possibleMoves = allMoves[2][pieceFieldNumber][1]
+        colorShadowPieces = nonzeroElements(possibleMoves & color)
         colorShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(colorShadowPieces)])
-        newMoves = (possibleMovesArray & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
+        newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
         if np.any(newMoves):
             enemyShadowPieces = nonzeroElements(newMoves & enemy)
             enemyShadows = np.bitwise_or.reduce(allShadows[0][n][toNumber(enemyShadowPieces)])
             newMoves &= ~enemyShadows
             newMoves = nonzeroElements(newMoves)
             if allPinned & n:
-                    king = np.max(color & board.king)
+                    king = nonzeroElements(color & board.king)
                     kingNumber = toNumber(king)
-                    place = n
                     for i in newMoves:
-                        if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & place):
-                            moves.append((n,i,1,False,0,0))
+                        if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
+                            moves.append((n,i,np.uint64(1),False,np.uint64(0),np.uint64(0)))
             else:
                 for i in newMoves:
-                    moves.append((n,i,1,False,0,0))
+                    moves.append((n,i,np.uint64(1),False,np.uint64(0),np.uint64(0)))
     return moves
 
 def getBishopMoves(board,color,enemy,allPinned,checkFilter):
     moves = []
-    for n in bits(board.bishop & color):
-        possibleMoves = allMoves[3][n]
-        whiteShadowPieces = possibleMoves[1] & color
-        whiteShadows = 0
-        for i in bits(whiteShadowPieces):
-            whiteShadows |= allShadows[1][n][1][i]
-        newMoves = (possibleMoves[1] & ~(whiteShadows | whiteShadowPieces)) & checkFilter
-        if newMoves:
-            blackShadowPieces = newMoves & enemy
-            blackShadows = 0
-            for i in bits(blackShadowPieces):
-                blackShadows |= allShadows[1][n][1][i]
-            newMoves &= ~blackShadows
-            if allPinned & 1 << n:
-                    king = color & board.king
-                    kingNumber = king.bit_length() - 1
-                    place = 1 << n
-                    for i in bits(newMoves):
-                        if (between[n][kingNumber] & 1 << i) or (between[kingNumber][i] & place):
-                            moves.append((possibleMoves[0],1 << i,4,False,0,0))
+    for n in nonzeroElements(board.bishop & color):
+        pieceFieldNumber = toNumber(n)
+        possibleMoves = allMoves[3][pieceFieldNumber][1]
+        colorShadowPieces = nonzeroElements(possibleMoves & color)
+        colorShadows = np.bitwise_or.reduce(allShadows[1][pieceFieldNumber][toNumber(colorShadowPieces)])
+        newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
+        if np.any(newMoves):
+            enemyShadowPieces = nonzeroElements(newMoves & enemy)
+            enemyShadows = np.bitwise_or.reduce(allShadows[1][n][toNumber(enemyShadowPieces)])
+            newMoves &= ~enemyShadows
+            newMoves = nonzeroElements(newMoves)
+            if allPinned & n:
+                    king = nonzeroElements(color & board.king)
+                    kingNumber = toNumber(king)
+                    for i in newMoves:
+                        if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
+                            moves.append((n,i,np.uint64(4),False,np.uint64(0),np.uint64(0)))
             else:
-                for i in bits(newMoves):
-                    moves.append((possibleMoves[0],1 << i,4,False,0,0))
+                for i in newMoves:
+                    moves.append((n,i,np.uint64(4),False,np.uint64(0),np.uint64(0)))
     return moves
 
 def getKnightMoves(board,color,allPinned,checkFilter):
     moves = []
-    for n in bits(board.knight & color):
-        possibleMoves = allMoves[5][n]
-        shadowPieces = possibleMoves[1] & color
-        newMoves = (possibleMoves[1] & ~shadowPieces) & checkFilter
-        if newMoves:
-            if allPinned & 1 << n:
-                    king = color & board.king
-                    kingNumber = king.bit_length() - 1
-                    place = 1 << n
-                    for i in bits(newMoves):
-                        if (between[n][kingNumber] & 1 << i) or (between[kingNumber][i] & place):
-                            moves.append((possibleMoves[0],1 << i,2,False,0,0))
+    for n in nonzeroElements(board.knight & color):
+        pieceFieldNumber = toNumber(n)
+        possibleMoves = allMoves[5][pieceFieldNumber][1]
+        shadowPieces = np.bitwise_or.reduce(possibleMoves & color)
+        newMoves = (possibleMoves & ~shadowPieces) & checkFilter
+        if np.any(newMoves):
+            newMoves = nonzeroElements(newMoves)
+            if allPinned & n:
+                    king = nonzeroElements(color & board.king)
+                    kingNumber = toNumber(king)
+                    for i in newMoves:
+                        if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
+                            moves.append((n,i,np.uint64(2),False,np.uint64(0),np.uint64(0)))
             else:
-                for i in bits(newMoves):
-                    moves.append((possibleMoves[0],1 << i,2,False,0,0))
+                for i in newMoves:
+                    moves.append((n,i,np.uint64(2),False,np.uint64(0),np.uint64(0)))
     return moves
 
 def getKingMoves(board,color,enemy,white):
@@ -324,37 +315,6 @@ def getQueenMoves(board,color,enemy,allPinned,checkFilter):
                 for i in bits(newMoves):
                     moves.append((possibleMoves[0],1 << i,8,False,0,0))
     return moves
-    
-def pinned(board, color, enemy):
-    king = board.king & color
-    kNumber = king.bit_length() - 1
-    attackers = (allMoves[2][kNumber][1] & (board.queen | board.rook) & enemy) | (allMoves[3][kNumber][1] & (board.queen | board.bishop) & enemy) 
-    pinned = 0
-    for n in bits(attackers):
-        blockers = between[kNumber][n] & board.all
-        if blockers.bit_count() == 1:
-            pinned |= blockers & color
-    return pinned
-
-def attacked(board,enemy,white,field):
-    if enemy & board.knight & allMoves[5][field][1]:
-        return enemy & board.knight & allMoves[5][field][1]
-    if enemy & board.king & allMoves[4][field][1]:
-        return enemy & board.king & allMoves[4][field][1]
-    if white and (enemy & board.pawn & allMoves[0][field][1][1]):
-        return enemy & board.pawn & allMoves[0][field][1][1]
-    if not white and (enemy & board.pawn & allMoves[1][field][1][1]):
-        return enemy & board.pawn & allMoves[1][field][1][1]
-    attackers = (allMoves[2][field][1] & (board.queen | board.rook) & enemy) | (allMoves[3][field][1] & (board.queen | board.bishop) & enemy) 
-    for i in bits(attackers):
-        blockers = between[field][i] & board.all
-        if not blockers:
-            return 1 << i
-    return 0
-    
-def inCheck(board,color,enemy,white):
-    kingN = board.king & color
-    return attacked(board,enemy,white,kingN.bit_length() - 1)
 
 def doMove(board,fromField,toField,piece,en_passant,castle,promotion):
     all = (board.all | toField) & ~fromField

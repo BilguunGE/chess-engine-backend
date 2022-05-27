@@ -1,4 +1,3 @@
-from typing import ValuesView
 import numpy as np
 # moves -- 0 = blackPawns, 1 = whitePawns, 2 = Rooks, 3 = Bishops, 4 = Kings, 5 = Knights
 def allMovesGen():
