@@ -79,7 +79,7 @@ class Board:
             enemy = self.white
         moves = []
         allPinned = np.uint64(0)
-        ##allPinned = pinned(color,enemy)
+        allPinned = pinned(self,color,enemy)
         checkFilter = np.uint64((1<<64)-1)
         ##attacker = inCheck(color,enemy,white)
         ##if inCheck(self,color,enemy,white):
@@ -88,7 +88,7 @@ class Board:
         moves.extend(self.getBishopMoves(color,enemy,allPinned,checkFilter))
         moves.extend(self.getPawnMoves(color,enemy,allPinned,checkFilter))
         moves.extend(self.getKnightMoves(color,allPinned,checkFilter))
-        ##moves.extend(getKingMoves(color,enemy,white))
+        moves.extend(self.getKingMoves(color,enemy))
         moves.extend(self.getQueenMoves(color,enemy,allPinned,checkFilter))
         return moves
        
@@ -216,29 +216,29 @@ class Board:
     
     def getKingMoves(self,color,enemy):
         moves = []
-        for n in bits(self.king & color):
-            possibleMoves = allMoves[4][n]
-            shadowPieces = possibleMoves[1] & color
-            newMoves = possibleMoves[1] & ~shadowPieces
-            if newMoves:
-                for i in bits(newMoves):
-                    if not attacked(self,enemy,self.isWhite,i):
-                        moves.append((possibleMoves[0],1 << i,16,False,0,0))
+        for n in nonzeroElements(self.king & color):
+            pieceFieldNumber = toNumber(n)
+            possibleMoves = allMoves[4][pieceFieldNumber][1]
+            shadowPieces = np.bitwise_or.reduce(possibleMoves & color)
+            newMoves = (possibleMoves & ~shadowPieces)
+            if np.any(newMoves):
+                for i in nonzeroElements(newMoves):
+                    if not attacked(self,enemy,toNumber(i),self.isWhite):
+                        moves.append((n,i,np.uint64(16),False,np.uint64(0),np.uint64(0)))
             if self.castle:
                 if not attacked(self,enemy,self.isWhite,n):
-                    kingF = 1 << n
                     if (self.isWhite and (self.castle & 1)) or (not self.isWhite and (self.castle & 4)):
-                        if not (kingF << 1 & self.all) and not (kingF << 2 & self.all) and not attacked(self,enemy,self.isWhite,n+1) and not attacked(self,enemy,self.isWhite,n+2):
+                        if not (n << np.uint64(1) & self.all) and not (n << np.uint64(2) & self.all) and not attacked(self,enemy,self.isWhite,n << np.uint64(1)) and not attacked(self,enemy,self.isWhite,n << np.uint64(2)):
                             if self.isWhite:
-                                moves.append((kingF,kingF<<2,16,False,1,0))
+                                moves.append((n,n << np.uint64(2),np.uint64(16),False,np.uint64(1),np.uint64(0)))
                             else:
-                                moves.append((kingF,kingF<<2,16,False,2,0))
+                                moves.append((n,n << np.uint64(2),np.uint64(16),False,np.uint64(2),np.uint64(0)))
                     if (self.isWhite and (self.castle & 2)) or (not self.isWhite and (self.castle & 8)):
-                        if not (kingF >> 1 & self.all) and not (kingF >> 2 & self.all) and not (kingF >> 3 & self.all) and not attacked(self,enemy,self.isWhite,n+1) and not attacked(self,enemy,self.isWhite,n+2):
+                        if not (n >> np.uint64(1) & self.all) and not (n >> np.uint64(2) & self.all) and not (n >> np.uint64(3) & self.all) and not attacked(self,enemy,self.isWhite,n >> np.uint64(1)) and not attacked(self,enemy,self.isWhite,n >> np.uint64(2)):
                             if self.isWhite:
-                                moves.append((kingF,kingF>>2,16,False,4,0))
+                                moves.append((n,n >> np.uint64(2),np.uint64(16),False,np.uint64(4),np.uint64(0)))
                             else:
-                                moves.append((kingF,kingF>>2,16,False,8,0))
+                                moves.append((n,n >> np.uint64(2),np.uint64(16),False,np.uint64(8),np.uint64(0)))
         return moves
     
     def getQueenMoves(self,color,enemy,allPinned,checkFilter):
