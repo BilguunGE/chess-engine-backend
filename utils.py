@@ -6,7 +6,7 @@ def fieldToString(field: np.uint64):
     y = field%8
     x = (field - y) / 8
     print(y)
-    txt = 'abcdefgh'[int(7-x)] + '12345678'[int(y)]
+    txt = 'abcdefgh'[int(y)] + '12345678'[int(7-x)]
     return txt
 
 def toNumber(field: np.ndarray | np.uint64) -> np.ndarray | np.uint64:
@@ -20,6 +20,7 @@ def bits(fields: np.uint64):
         fields ^= b
 
 def attacked(board, enemy: np.ndarray,white: np.ndarray,field: np.uint64):
+    field = toNumber(field)
     if np.any(enemy & board.knight & allMoves[5][field][2]):
         return True
     if np.any(enemy & board.king & allMoves[4][field][2]):
@@ -28,7 +29,7 @@ def attacked(board, enemy: np.ndarray,white: np.ndarray,field: np.uint64):
         return True
     if np.any(not white and np.any(enemy & board.pawn & allMoves[1][field][2][1])):
         return True
-    attackerPieces = (allMoves[2][field][2] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.rook)) & enemy) | (allMoves[3][field][2] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.bishop)) & enemy) 
+    attackerPieces = np.append((allMoves[2][field][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.rook)) & enemy), (allMoves[3][field][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.bishop)) & enemy))
     if np.any(attackerPieces):
         for n in bits(attackerPieces):
             blockers = between[field][n] & board.all
@@ -40,7 +41,7 @@ def inCheck(board, color: np.uint64,enemy: np.uint64,white: bool):
     kingN = nonzeroElements(board.king & color)
     return attacked(board,enemy,white,toNumber(kingN))
 
-def attackers():
+def attackers(board, field, enemy):
     return np.uint64(0)
 
 def toFen(board):
@@ -116,10 +117,10 @@ def nonzeroElements(array: np.ndarray):
     return array[np.nonzero(array)]
 
 def pinned(board, color: np.uint64, enemy: np.uint64):
-    king = nonzeroElements(board.king & color)
+    king = np.max(board.king & color)
     kNumber = toNumber(king)
-    attackers = np.append(allMoves[2][kNumber][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.rook)) & enemy), (allMoves[3][kNumber][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.bishop)) & enemy) 
-    pinned = 0
+    attackers = np.append((allMoves[2][kNumber][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.rook)) & enemy), (allMoves[3][kNumber][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.bishop)) & enemy))
+    pinned = np.uint64(0)
     for n in nonzeroElements(attackers):
         blockers = between[kNumber][toNumber(n)] & board.all
         if blockers.bit_count() == 1:
