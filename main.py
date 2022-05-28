@@ -24,7 +24,7 @@ class Board:
     isWhite = True
 
     def __init__(self,fenString):
-        fen =fenString.split()
+        fen = fenString.split()
         fenArray = fen[0].split('/')
         x = 0
         for i in fenArray:
@@ -77,7 +77,6 @@ class Board:
         if not self.isWhite:
             color = self.black
             enemy = self.white
-
         moves = []
         allPinned = np.uint64(0)
         ##allPinned = pinned(color,enemy)
@@ -90,7 +89,7 @@ class Board:
         moves.extend(self.getPawnMoves(color,enemy,allPinned,checkFilter))
         moves.extend(self.getKnightMoves(color,allPinned,checkFilter))
         ##moves.extend(getKingMoves(color,enemy,white))
-        ##moves.extend(getQueenMoves(color,enemy,allPinned,checkFilter))
+        moves.extend(self.getQueenMoves(color,enemy,allPinned,checkFilter))
         return moves
        
     def getPawnMoves(self,color,enemy,allPinned,checkFilter):
@@ -399,18 +398,8 @@ class Board:
         self.isWhite = not self.isWhite
 
 def getFen(fen):
-    info = fen.split()
-    self = getBoard(info)
-    if info[1] == 'w':
-        white = True
-        color = self.white
-        enemy = self.black
-    else:
-        white = False
-        self.isWhite = False
-        color = self.black
-        enemy = self.white
-    moves = getMoves(self,color,enemy,white)
+    self = Board(fen)
+    moves = self.getMoves()
     print(len(moves))
     print(moves)
     return moves ##toFen(doMove(self,moves[0][0],moves[0][1],moves[0][2],moves[0][3],moves[0][4],moves[0][5]))

@@ -117,7 +117,7 @@ def nonzeroElements(array: np.ndarray):
     return array[np.nonzero(array)]
 
 def pinned(board, color: np.uint64, enemy: np.uint64):
-    king = board.king & color
+    king = nonzeroElements(board.king & color)
     kNumber = toNumber(king)
     attackers = np.append(allMoves[2][kNumber][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.rook)) & enemy), (allMoves[3][kNumber][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.bishop)) & enemy) 
     pinned = 0
