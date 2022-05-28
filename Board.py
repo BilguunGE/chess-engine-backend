@@ -1,284 +1,405 @@
-import math
-import re
+from moves import *
+import numpy as np
+from utils import *
 
+whitePromotions = np.uint64(18374686479671623680)
+blackPromotions = np.uint64(255)
 
-def makeField(row, col):
-    colNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
-    rowNames = ["8", "7", "6", "5", "4", "3", "2", "1"]
-    return colNames[col] + rowNames[row]
-
+max = 'w'
 
 class Board:
-    ZERO_STRING = "0000000000000000000000000000000000000000000000000000000000000000"
-    RANK_1 = int("1111111100000000000000000000000000000000000000000000000000000000", 2)
-    RANK_2 = int("0000000011111111000000000000000000000000000000000000000000000000", 2)
-    RANK_3 = int("0000000000000000111111110000000000000000000000000000000000000000", 2)
-    RANK_4 = int("0000000000000000000000001111111100000000000000000000000000000000", 2)
-    RANK_5 = int("0000000000000000000000000000000011111111000000000000000000000000", 2)
-    RANK_6 = int("0000000000000000000000000000000000000000111111110000000000000000", 2)
-    RANK_7 = int("0000000000000000000000000000000000000000000000001111111100000000", 2)
-    RANK_8 = int("0000000000000000000000000000000000000000000000000000000011111111", 2)
-    RANK_H = int("1000000010000000100000001000000010000000100000001000000010000000", 2)
-    RANK_G = int("0100000001000000010000000100000001000000010000000100000001000000", 2)
-    RANK_F = int("0010000000100000001000000010000000100000001000000010000000100000", 2)
-    RANK_E = int("0001000000010000000100000001000000010000000100000001000000010000", 2)
-    RANK_D = int("0000100000001000000010000000100000001000000010000000100000001000", 2)
-    RANK_C = int("0000010000000100000001000000010000000100000001000000010000000100", 2)
-    RANK_B = int("0000001000000010000000100000001000000010000000100000001000000010", 2)
-    RANK_A = int("0000000100000001000000010000000100000001000000010000000100000001", 2)
-    RANK_MAP = {
-        'a': RANK_A,
-        'b': RANK_B,
-        'c': RANK_C,
-        'd': RANK_D,
-        'e': RANK_E,
-        'f': RANK_F,
-        'g': RANK_G,
-        'h': RANK_H
-    }
-    WP = 0
-    WN = 0
-    WB = 0
-    WR = 0
-    WQ = 0
-    WK = 0
-    BP = 0
-    BN = 0
-    BB = 0
-    BR = 0
-    BQ = 0
-    BK = 0
+    all = np.uint64(0)
+    pawn = np.array([], dtype=np.uint64)
+    rook = np.array([], dtype=np.uint64)
+    knight = np.array([], dtype=np.uint64)
+    bishop = np.array([], dtype=np.uint64)
+    queen = np.array([], dtype=np.uint64)
+    king = np.uint64(0)
+    white = np.uint64(0)
+    black = np.uint64(0)
+    castle = np.uint8(0)
+    en_passant = np.uint64(0)
+    halfmove = 0
+    fullmove = 1
+    isWhite = True
 
-    NOT_WHITE_PIECES = 0
-    BLACK_PIECES = 0
-    EMPTY = 0
-
-    isWhiteTurn = True
-    castleRight = "KQkq"
-    enPassant = "-"
-    halfmoveClock = 0
-    fullmoveCount = 1
-    chessBoard = [
-        ["r", "n", "b", "q", "k", "b", "n", "r"],
-        ["p", "p", "p", "p", "p", "p", "p", "p"],
-        ["", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "", ""],
-        ["P", "P", "P", "P", "P", "P", "P", "P"],
-        ["R", "N", "B", "Q", "K", "B", "N", "R"],
-    ]
-
-    def __init__(self, fenString=None):
-        self.fenString = fenString
-        self.initBoard()
-        self.convertArraysToBitboards()
-
-    def initBoard(self):
-        if not self.fenString is None:
-            splittedFEN = self.fenString.split(' ')
-            self.chessBoard = self.parseFEN(splittedFEN[0])
-            self.isWhiteTurn = splittedFEN[1] == "w"
-            self.castleRight = splittedFEN[2]
-            self.enPassant = splittedFEN[3]
-            self.halfmoveClock = int(splittedFEN[4])
-            self.fullmoveCount = int(splittedFEN[5])
-
-    def parseFEN(self, boardString):
-        board = []
-        rows = boardString.split("/")
-        for row in rows:
-            rowContent = []
-            for cell in row:
-                if re.match('\d', cell):
-                    for n in range(int(cell)):
-                        rowContent.append("")
+    def __init__(self,fenString):
+        fen = fenString.split()
+        fenArray = fen[0].split('/')
+        x = 0
+        for i in fenArray:
+            for j in i:
+                if j >= '0' and j <= '9':
+                    x += int(j)
                 else:
-                    rowContent.append(cell)
-            board.append(rowContent)
-        return board
+                    z = 1 << x
+                    self.all |= np.uint64(z)
+                    if j.isupper():
+                        self.white |= np.uint64(z)
+                    else:
+                        self.black |= np.uint64(z)
+                    if j == 'p' or j == 'P':
+                        self.pawn = np.append(self.pawn, np.uint64(z))
+                    elif j == 'r' or j == 'R':
+                        self.rook = np.append(self.rook, np.uint64(z))
+                    elif j == 'n' or j == 'N':
+                        self.knight = np.append(self.knight, np.uint64(z))
+                    elif j == 'b' or j == 'B':
+                        self.bishop = np.append(self.bishop, np.uint64(z))
+                    elif j == 'q' or j == 'Q':
+                        self.queen = np.append(self.queen, np.uint64(z))
+                    elif j == 'k' or j == 'K':
+                        self.king = np.append(self.king, np.uint64(z))
+                    x += 1
 
-    def convertArraysToBitboards(self):
-        for i in range(64):
-            binary = self.ZERO_STRING[i+1:] + "1" + self.ZERO_STRING[0:i]
-            num = int(binary, 2)
-            row = math.floor(i / 8)
-            col = i % 8
-            figure = self.chessBoard[row][col]
-            if figure == "P":
-                self.WP += num
-            elif figure == "N":
-                self.WN += num
-            elif figure == "B":
-                self.WB += num
-            elif figure == "R":
-                self.WR += num
-            elif figure == "Q":
-              self.WQ += num
-            elif figure == "K":
-              self.WK += num
-            elif figure == "p":
-              self.BP += num
-            elif figure == "n":
-              self.BN += num
-            elif figure == "b":
-              self.BB += num
-            elif figure == "r":
-              self.BR += num
-            elif figure == "q":
-              self.BQ += num
-            elif figure == "k":
-              self.BK += num
+        for i in fen[2]:
+            if i == 'K':
+                self.castle |= np.uint8(1)
+            if i == 'Q':
+                self.castle |= np.uint8(2)
+            if i == 'k':
+                self.castle |= np.uint8(4)
+            if i == 'q':
+                self.castle |= np.uint8(8)
 
-    def convertBitboardsToArray(self):
-        newChessBoard = []
-        for rowI in range(8):
-            cellContent = []
-            for cellJ in range(8):
-                cellContent.append('')
-            newChessBoard.append(cellContent)
-
-        for i in range(64):
-            row = math.floor(i / 8)
-            col = i % 8
-            if (self.WP >> i) & 1 == 1:
-                newChessBoard[row][col] = "P"
-            if (self.WN >> i) & 1 == 1:
-                newChessBoard[row][col] = "N"
-            if (self.WB >> i) & 1 == 1:
-                newChessBoard[row][col] = "B"
-            if (self.WR >> i) & 1 == 1:
-                newChessBoard[row][col] = "R"
-            if (self.WQ >> i) & 1 == 1:
-                newChessBoard[row][col] = "Q"
-            if (self.WK >> i) & 1 == 1:
-                newChessBoard[row][col] = "K"
-            if (self.BP >> i) & 1 == 1:
-                newChessBoard[row][col] = "p"
-            if (self.BN >> i) & 1 == 1:
-                newChessBoard[row][col] = "n"
-            if (self.BB >> i) & 1 == 1:
-                newChessBoard[row][col] = "b"
-            if (self.BR >> i) & 1 == 1:
-                newChessBoard[row][col] = "r"
-            if (self.BQ >> i) & 1 == 1:
-                newChessBoard[row][col] = "q"
-            if (self.BK >> i) & 1 == 1:
-                newChessBoard[row][col] = "k"
-
-        return newChessBoard
-
-    def getMoves(self):
-        # exluding black king, because he can't be eaten
-        self.BLACK_PIECES = self.BP | self.BN | self.BB | self.BR | self.BQ
-
-        # same here
-        self.WHITE_PIECES = self.WP | self.WN | self.WB | self.WR | self.WQ
-
-        # board with empty fields
-        self.EMPTY = ~(self.WP | self.WN | self.WB | self.WR | self.WQ |self.WK | self.BP | self.BN | self.BB | self.BR | self.BQ | self.BK)
-
-        return self.getMovesP()
-
-    def getMovesP(self):
-        moves = []
-        x = 1
-        if not self.isWhiteTurn:
-            x = -1
-
-        # beat left
-        PAWN_MOVES = (self.WP >> 7) & self.BLACK_PIECES & ~self.RANK_1 & ~ self.RANK_A
-        PAWN_MOVES_PROMO = (self.WP >> 7) & self.BLACK_PIECES & self.RANK_8 & ~self.RANK_A
-
-        if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << 7) & self.WHITE_PIECES & ~self.RANK_8 & ~ self.RANK_H
-            PAWN_MOVES_PROMO = (self.BP << 7) & self.WHITE_PIECES & self.RANK_1 & ~self.RANK_H
-
-        for i in range(64):
-            move = {}
-            if (PAWN_MOVES_PROMO >> i) & 1 == 1:
-                move['isPromo'] = True
-            if (PAWN_MOVES >> i) & 1 == 1:
-                move['toString'] = makeField(math.floor(i/8)+(x*1), (i % 8)-(x*1)) + "x" + makeField(math.floor(i/8), i % 8)
-                move['isHit'] = True
-                moves.append(move)
-
-        # beat right
-        PAWN_MOVES = (self.WP >> 9) & self.BLACK_PIECES & ~self.RANK_1 & ~ self.RANK_H
-        PAWN_MOVES_PROMO = (self.WP >> 9) & self.BLACK_PIECES & self.RANK_8 & ~self.RANK_H
-
-        if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << 9) & self.WHITE_PIECES & ~self.RANK_8 & ~ self.RANK_A
-            PAWN_MOVES_PROMO = (self.BP << 9) & self.WHITE_PIECES & self.RANK_1 & ~self.RANK_A
-
-        for i in range(64):
-            move = {}
-            if (PAWN_MOVES_PROMO >> i) & 1 == 1:
-                move['isPromo'] = True
-            if (PAWN_MOVES >> i) & 1 == 1:
-                move['toString'] = makeField(math.floor(i/8)+(x*1), (i % 8)-(x*1)) + "x"+makeField(math.floor(i/8), i % 8)
-                move['isHit'] = True
-                moves.append(move)
-
-        # move 1 forward
-        PAWN_MOVES = (self.WP >> 8) & self.EMPTY & ~self.RANK_1
-        PAWN_MOVES_PROMO = (self.WP >> 8) & self.EMPTY & self.RANK_8
-
-        if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << 8) & self.EMPTY & ~self.RANK_8
-            PAWN_MOVES_PROMO = (self.BP << 8) & self.EMPTY & self.RANK_1
-
-        for i in range(64):
-            move = {}
-            if (PAWN_MOVES_PROMO >> i) & 1 == 1:
-                move['isPromo'] = True
-            if (PAWN_MOVES >> i) & 1 == 1:
-                move['toString'] = makeField(math.floor(i/8)+(x*1), (i % 8)) + "-"+makeField(math.floor(i/8), i % 8)
-                move['isHit'] = False
-                moves.append(move)
-
-        # move 2 forward
-        PAWN_MOVES = (self.WP >> 16) & self.EMPTY & (self.EMPTY >> 8) & self.RANK_4
+        if fen[3] != '-':
+            x = 8-int(fen[3])
+            y = ord(fen[3]) - 97
+            self.en_passant |= np.uint64(1 << (x*8+y))
     
-        if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << 16) & self.EMPTY & (self.EMPTY << 8) & self.RANK_5
-
-        for i in range(64):
-            move = {}
-            if (PAWN_MOVES >> i) & 1 == 1:
-                move['toString'] = makeField(math.floor(i/8)+(x*2), (i % 8)) + "-"+makeField(math.floor(i/8), i % 8)
-                move['isHit'] = False
-                moves.append(move)
-
-        if self.enPassant != '-':
-            RANK = self.RANK_MAP[self.enPassant[0]]
-
-            # en passant left
-            PAWN_MOVES = (self.WP << 1) & self.BP & self.RANK_5 & ~self.RANK_A & RANK
-            
-            if not self.isWhiteTurn:
-                PAWN_MOVES = (self.BP >> 1) & self.WP & self.RANK_4 & ~self.RANK_H & RANK
-
-            for i in range(64):
-                move = {}
-                if (PAWN_MOVES >> i)&1 == 1:
-                    move['toString'] = makeField(math.floor(i/8), i % 8-(x*1))+'x'+self.enPassant
-                    move['isHit'] = True
-                    move['enPassant'] = True
-                    moves.append(move)
-
-            # en passant right
-            PAWN_MOVES = (self.WP >> 1) & self.BP & self.RANK_5 & ~self.RANK_H & RANK
-
-            if not self.isWhiteTurn:
-                PAWN_MOVES = (self.BP << 1) & self.WP & self.RANK_4 & ~self.RANK_A & RANK
-
-            for i in range(64):
-                move = {}
-                if (PAWN_MOVES >> i)&1 == 1:
-                    move['toString'] = makeField(math.floor(i/8), i % 8+(x*1))+'x'+self.enPassant
-                    move['isHit'] = True
-                    move['enPassant'] = True
-                    moves.append(move)
-
+        self.isWhite = fen[1] == 'w'
+        self.halfmove = int(fen[4])
+        self.fullmove = int(fen[5])
+    
+    def getMoves(self):
+        color = self.white
+        enemy = self.black
+        if not self.isWhite:
+            color = self.black
+            enemy = self.white
+        moves = []
+        allPinned = np.uint64(0)
+        ##allPinned = pinned(color,enemy)
+        checkFilter = np.uint64((1<<64)-1)
+        ##attacker = inCheck(color,enemy,white)
+        ##if inCheck(self,color,enemy,white):
+            ##checkFilter = between[toNumber(attacker) - 1][(self.king & color).bit_length() - 1] | attacker | (self.king & color)
+        moves.extend(self.getRookMoves(color,enemy,allPinned,checkFilter))
+        moves.extend(self.getBishopMoves(color,enemy,allPinned,checkFilter))
+        moves.extend(self.getPawnMoves(color,enemy,allPinned,checkFilter))
+        moves.extend(self.getKnightMoves(color,allPinned,checkFilter))
+        ##moves.extend(getKingMoves(color,enemy,white))
+        moves.extend(self.getQueenMoves(color,enemy,allPinned,checkFilter))
         return moves
+       
+    def getPawnMoves(self,color,enemy,allPinned,checkFilter):
+        moves = []
+        if self.isWhite:
+            for n in nonzeroElements(self.pawn & color):
+                pieceFieldNumber = toNumber(n)
+                possibleMoves = allMoves[1][pieceFieldNumber][1][0]
+                possibleCatches = allMoves[1][pieceFieldNumber][1][1]
+                catches = np.bitwise_or.reduce(possibleCatches & (enemy | self.en_passant))
+                shadowPieces = np.bitwise_or.reduce(possibleMoves & self.all)
+                newMoves = ((possibleMoves & ~shadowPieces & ~(shadowPieces>>np.uint64(8))) | catches) & checkFilter
+                if np.any(newMoves):
+                    newMoves = nonzeroElements(newMoves)
+                    if np.any(allPinned & np.uint64(1 << pieceFieldNumber)):
+                        king = np.max(color & self.king)
+                        kingNumber = toNumber(king)
+                        if (between[n][kingNumber] & newMoves) or (between[kingNumber][toNumber(newMoves)] & n):
+                            for i in newMoves[np.nonzero(newMoves)]:
+                                moves.append((n,i,np.uint64(0),(n>>np.uint64(16)==i),np.uint64(0),np.uint64(0)))
+                    else:
+                        promotions = nonzeroElements(newMoves & whitePromotions)
+                        for i in promotions:
+                            x = 0
+                            while x < 3:
+                                moves.append((n,i,np.uint64(0),False,False,np.uint(1<<x)))
+                                x += 1
+                        newMoves = nonzeroElements(newMoves & ~np.bitwise_or.reduce(promotions))
+                        for i in newMoves:
+                            moves.append((n,i,np.uint64(0),(n<<np.uint64(16)==i),np.uint64(0),np.uint64(0)))
+        else:
+            for n in nonzeroElements(self.pawn & color):
+                pieceFieldNumber = toNumber(n)
+                possibleMoves = allMoves[0][pieceFieldNumber][1][0]
+                possibleCatches = allMoves[0][pieceFieldNumber][1][1]
+                catches = np.bitwise_or.reduce(possibleCatches & (enemy | self.en_passant))
+                shadowPieces = np.bitwise_or.reduce(possibleMoves & self.all)
+                newMoves = ((possibleMoves & ~shadowPieces & ~(shadowPieces<<np.uint64(8))) | catches) & checkFilter
+                if np.any(newMoves):
+                    newMoves = nonzeroElements(newMoves)
+                    if np.any(allPinned & n):
+                        king = np.max(color & self.king)
+                        kingNumber = toNumber(king)
+                        if (between[n][kingNumber] & newMoves) or (between[kingNumber][toNumber(newMoves)] & n):
+                            for i in newMoves[np.nonzero(newMoves)]:
+                                moves.append((n,i,np.uint64(0),(n<<np.uint64(16)==i),np.uint64(0),np.uint64(0)))
+                    else:
+                        promotions = nonzeroElements(newMoves & whitePromotions)
+                        for i in promotions:
+                            x = 0
+                            while x < 3:
+                                moves.append((n,i,np.uint64(0),False,np.uint64(0),np.uint(1<<x)))
+                        newMoves = nonzeroElements(newMoves & ~np.bitwise_or.reduce(promotions))
+                        for i in newMoves:
+                            moves.append((n,i,np.uint64(0),(n<<np.uint64(16)==i),np.uint64(0),np.uint64(0)))
+        return moves
+
+    def getRookMoves(self,color,enemy,allPinned,checkFilter):
+        moves = []
+        for n in nonzeroElements(self.rook & color):
+            pieceFieldNumber = toNumber(n)
+            possibleMoves = allMoves[2][pieceFieldNumber][1]
+            colorShadowPieces = nonzeroElements(possibleMoves & color)
+            colorShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(colorShadowPieces)])
+            newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
+            if np.any(newMoves):
+                enemyShadowPieces = nonzeroElements(newMoves & enemy)
+                enemyShadows = np.bitwise_or.reduce(allShadows[0][n][toNumber(enemyShadowPieces)])
+                newMoves &= ~enemyShadows
+                newMoves = nonzeroElements(newMoves)
+                if allPinned & n:
+                        king = nonzeroElements(color & self.king)
+                        kingNumber = toNumber(king)
+                        for i in newMoves:
+                            if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
+                                moves.append((n,i,np.uint64(1),False,np.uint64(0),np.uint64(0)))
+                else:
+                    for i in newMoves:
+                        moves.append((n,i,np.uint64(1),False,np.uint64(0),np.uint64(0)))
+        return moves
+
+    def getBishopMoves(self,color,enemy,allPinned,checkFilter):
+        moves = []
+        for n in nonzeroElements(self.bishop & color):
+            pieceFieldNumber = toNumber(n)
+            possibleMoves = allMoves[3][pieceFieldNumber][1]
+            colorShadowPieces = nonzeroElements(possibleMoves & color)
+            colorShadows = np.bitwise_or.reduce(allShadows[1][pieceFieldNumber][toNumber(colorShadowPieces)])
+            newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
+            if np.any(newMoves):
+                enemyShadowPieces = nonzeroElements(newMoves & enemy)
+                enemyShadows = np.bitwise_or.reduce(allShadows[1][n][toNumber(enemyShadowPieces)])
+                newMoves &= ~enemyShadows
+                newMoves = nonzeroElements(newMoves)
+                if allPinned & n:
+                        king = nonzeroElements(color & self.king)
+                        kingNumber = toNumber(king)
+                        for i in newMoves:
+                            if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
+                                moves.append((n,i,np.uint64(4),False,np.uint64(0),np.uint64(0)))
+                else:
+                    for i in newMoves:
+                        moves.append((n,i,np.uint64(4),False,np.uint64(0),np.uint64(0)))
+        return moves
+    def getKnightMoves(self,color,allPinned,checkFilter):
+        moves = []
+        for n in nonzeroElements(self.knight & color):
+            pieceFieldNumber = toNumber(n)
+            possibleMoves = allMoves[5][pieceFieldNumber][1]
+            shadowPieces = np.bitwise_or.reduce(possibleMoves & color)
+            newMoves = (possibleMoves & ~shadowPieces) & checkFilter
+            if np.any(newMoves):
+                newMoves = nonzeroElements(newMoves)
+                if allPinned & n:
+                        king = nonzeroElements(color & self.king)
+                        kingNumber = toNumber(king)
+                        for i in newMoves:
+                            if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
+                                moves.append((n,i,np.uint64(2),False,np.uint64(0),np.uint64(0)))
+                else:
+                    for i in newMoves:
+                        moves.append((n,i,np.uint64(2),False,np.uint64(0),np.uint64(0)))
+        return moves
+    
+    def getKingMoves(self,color,enemy):
+        moves = []
+        for n in bits(self.king & color):
+            possibleMoves = allMoves[4][n]
+            shadowPieces = possibleMoves[1] & color
+            newMoves = possibleMoves[1] & ~shadowPieces
+            if newMoves:
+                for i in bits(newMoves):
+                    if not attacked(self,enemy,self.isWhite,i):
+                        moves.append((possibleMoves[0],1 << i,16,False,0,0))
+            if self.castle:
+                if not attacked(self,enemy,self.isWhite,n):
+                    kingF = 1 << n
+                    if (self.isWhite and (self.castle & 1)) or (not self.isWhite and (self.castle & 4)):
+                        if not (kingF << 1 & self.all) and not (kingF << 2 & self.all) and not attacked(self,enemy,self.isWhite,n+1) and not attacked(self,enemy,self.isWhite,n+2):
+                            if self.isWhite:
+                                moves.append((kingF,kingF<<2,16,False,1,0))
+                            else:
+                                moves.append((kingF,kingF<<2,16,False,2,0))
+                    if (self.isWhite and (self.castle & 2)) or (not self.isWhite and (self.castle & 8)):
+                        if not (kingF >> 1 & self.all) and not (kingF >> 2 & self.all) and not (kingF >> 3 & self.all) and not attacked(self,enemy,self.isWhite,n+1) and not attacked(self,enemy,self.isWhite,n+2):
+                            if self.isWhite:
+                                moves.append((kingF,kingF>>2,16,False,4,0))
+                            else:
+                                moves.append((kingF,kingF>>2,16,False,8,0))
+        return moves
+    
+    def getQueenMoves(self,color,enemy,allPinned,checkFilter):
+        moves = []
+        for n in nonzeroElements(self.queen & color):
+            pieceFieldNumber = toNumber(n)
+            possibleMoves = allMoves[2][pieceFieldNumber][1]
+            colorShadowPieces = nonzeroElements(possibleMoves & color)
+            colorShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(colorShadowPieces)])
+            newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
+            if np.any(newMoves):
+                enemyShadowPieces = nonzeroElements(newMoves & enemy)
+                enemyShadows = np.bitwise_or.reduce(allShadows[0][n][toNumber(enemyShadowPieces)])
+                newMoves &= ~enemyShadows
+                newMoves = nonzeroElements(newMoves)
+                if allPinned & n:
+                        king = nonzeroElements(color & self.king)
+                        kingNumber = toNumber(king)
+                        for i in newMoves:
+                            if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
+                                moves.append((n,i,np.uint64(1),False,np.uint64(0),np.uint64(0)))
+                else:
+                    for i in newMoves:
+                        moves.append((n,i,np.uint64(8),False,np.uint64(0),np.uint64(0)))
+        for n in nonzeroElements(self.queen & color):
+            pieceFieldNumber = toNumber(n)
+            possibleMoves = allMoves[3][pieceFieldNumber][1]
+            colorShadowPieces = nonzeroElements(possibleMoves & color)
+            colorShadows = np.bitwise_or.reduce(allShadows[1][pieceFieldNumber][toNumber(colorShadowPieces)])
+            newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
+            if np.any(newMoves):
+                enemyShadowPieces = nonzeroElements(newMoves & enemy)
+                enemyShadows = np.bitwise_or.reduce(allShadows[1][n][toNumber(enemyShadowPieces)])
+                newMoves &= ~enemyShadows
+                newMoves = nonzeroElements(newMoves)
+                if allPinned & n:
+                        king = nonzeroElements(color & self.king)
+                        kingNumber = toNumber(king)
+                        for i in newMoves:
+                            if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
+                                moves.append((n,i,np.uint64(4),False,np.uint64(0),np.uint64(0)))
+                else:
+                    for i in newMoves:
+                        moves.append((n,i,np.uint64(8),False,np.uint64(0),np.uint64(0)))
+        return moves
+    
+    def doMove(self,fromField,toField,piece,en_passant,castle,promotion):
+        all = (self.all | toField) & ~fromField
+        en_passantNew = 0
+        castleNew = self.castle
+        halfmove = self.halfmove + 1
+        if self.isWhite:
+            blackPieces = self.black & ~toField
+            whitePieces = (self.white | toField) ^ fromField
+            if (blackPieces & ~self.black):
+                halfmove = 0
+        else:
+            whitePieces = self.white & ~toField
+            blackPieces = (self.black | toField) ^ fromField
+            if (whitePieces & ~self.white):
+                halfmove = 0
+        if not piece:
+            halfmove = 0
+            rook = self.rook & ~toField
+            knight = self.knight & ~toField
+            bishop = self.bishop & ~toField
+            queen = self.queen & ~toField
+            king = self.king & ~toField
+            if promotion:
+                if promotion & 1:
+                    rook = self.rook | toField
+                    pawn = self.pawn ^ fromField
+                elif promotion & 2:
+                    knight = self.knight | toField
+                    pawn = self.pawn ^ fromField
+                elif promotion & 4:
+                    bishop = self.bishop | toField
+                    pawn = self.pawn ^ fromField
+                elif promotion & 8:
+                    queen = self.queen | toField
+                    pawn = self.pawn ^ fromField
+            elif en_passant:
+                if self.isWhite:
+                    en_passantNew = fromField>>8
+                else:
+                    en_passantNew = fromField<<8
+                pawn = (self.pawn | toField) ^ fromField
+            else:
+                pawn = (self.pawn | toField) ^ fromField
+        elif piece & 1:
+            rook = (self.rook | toField) ^ fromField
+            pawn = self.pawn & ~toField
+            knight = self.knight & ~toField
+            bishop = self.bishop & ~toField
+            queen = self.queen & ~toField
+            king = self.king & ~toField
+        elif piece & 2:
+            knight = (self.knight | toField) ^ fromField
+            pawn = self.pawn & ~toField
+            rook = self.rook & ~toField
+            bishop = self.bishop & ~toField
+            queen = self.queen & ~toField
+            king = self.king & ~toField
+        elif piece & 4:
+            bishop = (self.bishop | toField) ^ fromField
+            pawn = self.pawn & ~toField
+            rook = self.rook & ~toField
+            knight = self.knight & ~toField
+            queen = self.queen & ~toField
+            king = self.king & ~toField
+        elif piece & 8:
+            queen = (self.queen | toField) ^ fromField
+            pawn = self.pawn & ~toField
+            rook = self.rook & ~toField
+            knight = self.knight & ~toField
+            bishop = self.bishop & ~toField
+            king = self.king & ~toField
+        elif piece & 16:
+            pawn = self.pawn & ~toField
+            rook = self.rook & ~toField
+            knight = self.knight & ~toField
+            bishop = self.bishop & ~toField
+            queen = self.queen & ~toField
+            if castle:
+                if castle & 1:
+                    king = (self.king | toField) ^ fromField
+                    rook = (self.rook | (1 << 61)) & ~(1 << 63)
+                    whitePieces = whitePieces & ~(1 << 63) | rook
+                elif castle & 4:
+                    king = (self.king | toField) ^ fromField
+                    rook = (self.rook | (1 << 5)) & ~(1 << 7)
+                    blackPieces = blackPieces & ~(1 << 7) | rook
+                elif castle & 2:
+                    king = (self.king | toField) ^ fromField
+                    rook = (self.rook | (1 << 59)) & ~(1 << 56)
+                    whitePieces = whitePieces & ~(1 << 56) | rook
+                elif castle & 8:
+                    king = (self.king | toField) ^ fromField
+                    rook = (self.rook | (1 << 3)) & ~(1 << 0)
+                    blackPieces = blackPieces & ~(1 << 0) | rook
+                all = (all & ~(self.rook)) | rook
+            else:
+                king = (self.king | toField) & ~fromField
+        self.all = all
+        self.pawn =pawn
+        self.rook = rook
+        self.knight =knight
+        self.bishop =bishop
+        self.queen = queen
+        self.king = king
+        self.black =blackPieces
+        self.white =whitePieces
+        self.castle =castleNew
+        self.en_passant =en_passantNew
+        self.halfmove = halfmove
+        self.fullmove +=1
+        self.isWhite = not self.isWhite
+
+def getFen(fen):
+    self = Board(fen)
+    moves = self.getMoves()
+    print(len(moves))
+    print(moves)
+    return moves ##toFen(doMove(self,moves[0][0],moves[0][1],moves[0][2],moves[0][3],moves[0][4],moves[0][5]))
