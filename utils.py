@@ -20,30 +20,27 @@ def bits(fields: np.uint64):
         yield toNumber(b) - np.uint64(1)
         fields ^= b
 
-def attacked(board, enemy: np.ndarray,white: np.ndarray,field: np.uint64):
-    field = toNumber(field)
+def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64):
+    field = np.max(toNumber(field))
     if np.any(enemy & board.knight & allMoves[5][field][2]):
-        return True
+        return np.max(enemy & board.knight & allMoves[5][field][2])
     if np.any(enemy & board.king & allMoves[4][field][2]):
-        return True
+        return np.max(enemy & board.king & allMoves[4][field][2])
     if np.any(white and np.any(enemy & board.pawn & allMoves[0][field][2][1])):
-        return True
+        return np.max(enemy & board.pawn & allMoves[0][field][2][1])
     if np.any(not white and np.any(enemy & board.pawn & allMoves[1][field][2][1])):
-        return True
+        return np.max(enemy & board.pawn & allMoves[1][field][2][1])
     attackerPieces = np.append((allMoves[2][field][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.rook)) & enemy), (allMoves[3][field][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.bishop)) & enemy))
     if np.any(attackerPieces):
-        for n in bits(attackerPieces):
-            blockers = between[field][n] & board.all
+        for n in nonzeroElements(attackerPieces):
+            blockers = between[field][toNumber(n)] & board.all
             if not blockers:
-                return True
-    return False
+                return (between[field][toNumber(n)] | n)
+    return np.uint64(0)
 
 def inCheck(board, color: np.uint64,enemy: np.uint64,white: bool):
     kingN = nonzeroElements(board.king & color)
-    return attacked(board,enemy,white,toNumber(kingN))
-
-def attackers(board, field, enemy):
-    return np.uint64(0)
+    return attacked(board,enemy,white,kingN)
 
 def toFen(board):
     boardTxt = ['-']*64

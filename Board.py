@@ -81,9 +81,9 @@ class Board:
         allPinned = np.uint64(0)
         allPinned = pinned(self,color,enemy)
         checkFilter = np.uint64((1<<64)-1)
-        ##attacker = inCheck(color,enemy,white)
-        ##if inCheck(self,color,enemy,white):
-            ##checkFilter = between[toNumber(attacker) - 1][(self.king & color).bit_length() - 1] | attacker | (self.king & color)
+        attacker = inCheck(self,color,enemy,self.isWhite)
+        if attacker:
+            checkFilter = attacker
         moves.extend(self.getRookMoves(color,enemy,allPinned,checkFilter))
         moves.extend(self.getBishopMoves(color,enemy,allPinned,checkFilter))
         moves.extend(self.getPawnMoves(color,enemy,allPinned,checkFilter))
@@ -400,6 +400,4 @@ class Board:
 def getFen(fen):
     self = Board(fen)
     moves = self.getMoves()
-    print(len(moves))
-    print(moves)
     return moves ##toFen(doMove(self,moves[0][0],moves[0][1],moves[0][2],moves[0][3],moves[0][4],moves[0][5]))
