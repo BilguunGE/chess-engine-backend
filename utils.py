@@ -1,3 +1,4 @@
+from typing import Union
 import numpy as np
 from moves import *
 
@@ -5,11 +6,11 @@ def fieldToString(field: np.uint64):
     field = np.ceil(np.log2(field)).astype(int)
     y = field%8
     x = (field - y) / 8
-    print(y)
     txt = 'abcdefgh'[int(y)] + '12345678'[int(7-x)]
     return txt
 
-def toNumber(field: np.ndarray | np.uint64) -> np.ndarray | np.uint64:
+
+def toNumber(field: Union[np.ndarray, np.uint64]) -> Union[np.ndarray, np.uint64]:
     field = np.ceil(np.log2(field)).astype(int)
     return field
 
