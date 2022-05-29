@@ -1,5 +1,6 @@
 from Board import *
 from utils import fieldToString, getFigure
+from evaluation import evaluate
 
 
 def getMoves(fenString):
@@ -15,4 +16,7 @@ def getMoves(fenString):
         object['toString'] = figure + fromField+beat+toField
         object['isHit'] = bool(move[3])
         list.append(object)
-    return {'moves': list}
+    return {
+        'moves': list, 
+        'value': evaluate(b)
+        }
