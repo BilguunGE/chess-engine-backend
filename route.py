@@ -8,11 +8,9 @@ def getMoves(fenString):
     list = []
     for move in moves:
         object = {}
-        figure = getFigure(move[2], b.isWhite)
-        fromField = fieldToString(move[0])
-        beat = isBeat(move[3])
-        toField = fieldToString(move[1])
-        object['toString'] = figure + fromField+beat+toField
-        object['isHit'] = bool(move[3])
+        object['fromField'] = fieldToString(move[0])
+        object['toField'] = fieldToString(move[1])
+        object['figure'] = getFigure(move[2])
+        object['enPassant'] = bool(move[3])
         list.append(object)
     return {'moves': list}

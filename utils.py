@@ -125,12 +125,10 @@ def pinned(board, color: np.uint64, enemy: np.uint64):
             pinned |= blockers & color
     return pinned
 
-def getFigure(num, isWhite):
+def getFigure(num):
     result = ''
     if num == 2:
         result = 'N'
-    if not isWhite:
-        result = result.lower()
     return result
 
 def isBeat(isBeatable):
