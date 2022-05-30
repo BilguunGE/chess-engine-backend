@@ -22,15 +22,15 @@ def bits(fields: np.uint64):
 
 def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64):
     field = np.max(toNumber(field))
-    if np.any(enemy & board.knight & allMoves[5][field][2]):
-        return np.max(enemy & board.knight & allMoves[5][field][2])
-    if np.any(enemy & board.king & allMoves[4][field][2]):
-        return np.max(enemy & board.king & allMoves[4][field][2])
-    if np.any(white and np.any(enemy & board.pawn & allMoves[0][field][2][1])):
-        return np.max(enemy & board.pawn & allMoves[0][field][2][1])
-    if np.any(not white and np.any(enemy & board.pawn & allMoves[1][field][2][1])):
-        return np.max(enemy & board.pawn & allMoves[1][field][2][1])
-    attackerPieces = np.append((allMoves[2][field][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.rook)) & enemy), (allMoves[3][field][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.bishop)) & enemy))
+    if np.any(enemy & board.pieceList[2] & allMoves[5][field][2]):
+        return np.max(enemy & board.pieceList[2] & allMoves[5][field][2])
+    if np.any(enemy & board.pieceList[5] & allMoves[4][field][2]):
+        return np.max(enemy & board.pieceList[5] & allMoves[4][field][2])
+    if np.any(white and np.any(enemy & board.pieceList[0] & allMoves[0][field][2][1])):
+        return np.max(enemy & board.pieceList[0] & allMoves[0][field][2][1])
+    if np.any(not white and np.any(enemy & board.pieceList[0] & allMoves[1][field][2][1])):
+        return np.max(enemy & board.pieceList[0] & allMoves[1][field][2][1])
+    attackerPieces = np.append((allMoves[2][field][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[1])) & enemy), (allMoves[3][field][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[3])) & enemy))
     if np.any(attackerPieces):
         for n in nonzeroElements(attackerPieces):
             blockers = between[field][toNumber(n)] & board.all
@@ -39,22 +39,22 @@ def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64):
     return np.uint64(0)
 
 def inCheck(board, color: np.uint64,enemy: np.uint64,white: bool):
-    kingN = nonzeroElements(board.king & color)
+    kingN = nonzeroElements(board.pieceList[5] & color)
     return attacked(board,enemy,white,kingN)
 
 def toFen(board):
     boardTxt = ['-']*64
-    for n in board.pawn:
+    for n in board.pieceList[0]:
         boardTxt[toNumber(n)] = 'p'
-    for n in board.rook:
+    for n in board.pieceList[1]:
         boardTxt[toNumber(n)] = 'r'
-    for n in board.knight:
+    for n in board.pieceList[2]:
         boardTxt[toNumber(n)] = 'n'
-    for n in board.bishop:
+    for n in board.pieceList[3]:
         boardTxt[toNumber(n)] = 'b'
-    for n in board.queen:
+    for n in board.pieceList[4]:
         boardTxt[toNumber(n)] = 'q'
-    for n in board.king:
+    for n in board.pieceList[5]:
         boardTxt[toNumber(n)] = 'k'
     for n in bits(board.white):
         boardTxt[n] = boardTxt[n].upper()
@@ -115,9 +115,9 @@ def nonzeroElements(array: np.ndarray):
     return array[np.nonzero(array)]
 
 def pinned(board, color: np.uint64, enemy: np.uint64):
-    king = np.max(board.king & color)
+    king = np.max(board.pieceList[5] & color)
     kNumber = toNumber(king)
-    attackers = np.append((allMoves[2][kNumber][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.rook)) & enemy), (allMoves[3][kNumber][1] & (np.bitwise_or.reduce(board.queen) | np.bitwise_or.reduce(board.bishop)) & enemy))
+    attackers = np.append((allMoves[2][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[1])) & enemy), (allMoves[3][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[3])) & enemy))
     pinned = np.uint64(0)
     for n in nonzeroElements(attackers):
         blockers = between[kNumber][toNumber(n)] & board.all
