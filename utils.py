@@ -1,6 +1,9 @@
 from typing import Union
 import numpy as np
 from moves import *
+import math
+import time
+
 
 def fieldToString(field: np.uint64):
     field = np.ceil(np.log2(field)).astype(int)
@@ -129,6 +132,12 @@ def getFigure(num):
     result = ''
     if num == 2:
         result = 'N'
+    elif num == 3:
+        result = ''
+    elif num == 4:
+        result = ''
+    elif num == 5:
+        result = ''
     return result
 
 def isBeat(isBeatable):
@@ -136,3 +145,62 @@ def isBeat(isBeatable):
     if isBeatable:
         result ='x'
     return result
+
+def isGameDone(board):
+    return False
+
+def evalBoard(board):
+    return 0
+
+def now():
+    return time.time()*1000
+
+def iterativeDeepening(timeLimit, board, depth, alpha, beta, maximizingPlayer):
+    endTime = now() + timeLimit
+    depth = 1
+    result = 0
+    while True:
+        if now() >= endTime:
+            break
+        result = alphabeta(board, depth, alpha, beta, maximizingPlayer)
+        depth += 1
+    return result
+
+def minimax(board, depth, maximizingPlayer):
+    if depth == 0 or isGameDone(board):
+        value = evalBoard(board)
+        board.undoAllMoves()
+        return value
+    if maximizingPlayer:
+        value = float('-inf')
+        for child in board.getMoves():
+            value = math.max(value, minimax(board.doMove(child), depth-1, False))
+        return value
+    else:
+        value = float('inf')
+        for child in board.getMoves():
+            value = math.min(value, minimax(board.doMove(child), depth-1, True))
+        return value
+
+
+def alphabeta(board, depth, alpha, beta, maximizingPlayer):
+    if depth == 0 or isGameDone(board):
+        value = evalBoard(board)
+        board.undoAllMoves()
+        return value
+    if maximizingPlayer:
+        value = float('-inf')
+        for child in board.getMoves():
+            value = math.max(value, alphabeta(board.doMove(child), depth-1, alpha, beta, False))
+            if value >= beta:
+                break
+            alpha = math.max(alpha, value)
+        return value
+    else:
+        value = float('inf')
+        for child in board.getMoves():
+            value = math.min(value, alphabeta(board.doMove(child), depth-1, alpha, beta, True))
+            if value <= alpha:
+                break
+            beta = math.min(beta, value)
+        return value

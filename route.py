@@ -12,5 +12,7 @@ def getMoves(fenString):
         object['toField'] = fieldToString(move[1])
         object['figure'] = getFigure(move[2])
         object['enPassant'] = bool(move[3])
+        object['castle'] = bool(move[4])
+        object['promotion'] = bool(move[5])
         list.append(object)
     return {'moves': list}

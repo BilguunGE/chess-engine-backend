@@ -20,6 +20,7 @@ class Board:
     halfmove = 0
     fullmove = 1
     isWhite = True
+    moveHistoryAB = []
 
     def __init__(self,fenString):
         fen = fenString.split()
@@ -283,7 +284,13 @@ class Board:
                         moves.append((n,i,4,False,np.uint64(0),np.uint64(0)))
         return moves
     
-    def doMove(self,fromField,toField,piece,en_passant,castle,promotion):
+    def doMove(self, move, persistant= False):
+        fromField = move[0]
+        toField = move[1]
+        piece = move[2]
+        en_passant = move[3]
+        castle = move[4]
+        promotion = move[5]
         ##pieceNr == 0-Pawn, 1-Rook, 2-Knight, 3-Bishop, 4-Queen, 5-King
         self.all = (self.all | toField) & ~fromField
         self.fullmove += 1
@@ -293,6 +300,10 @@ class Board:
         self.pieceList[2] = nonzeroElements(self.pieceList[2] & ~toField)
         self.pieceList[3] = nonzeroElements(self.pieceList[3] & ~toField)
         self.pieceList[4] = nonzeroElements(self.pieceList[4] & ~toField)
+        
+        if not persistant:
+            self.moveHistoryAB.append(move)
+
         if self.isWhite:
             oldEnPassant = self.en_passant<<np.uint64(8)
         else:
@@ -356,6 +367,16 @@ class Board:
             self.black = self.white & ~toField
             self.white = (self.black | toField) & ~fromField
         self.isWhite = not self.isWhite
+        return self
+
+    def undoMove(self, move):
+        pass
+
+    def undoAllMoves(self):
+        while len(self.moveHistoryAB) > 0:
+            move = self.moveHistoryAB.pop()
+            self.undoMove(move)
+
 
 def getFen(fen):
     self = Board(fen)
