@@ -18,10 +18,9 @@ def toNumber(field: Union[np.ndarray, np.uint64]) -> Union[np.ndarray, np.uint64
     return field
 
 def bits(fields: np.uint64):
-    while fields:
-        b = fields & (~fields+np.uint64(1))
-        yield toNumber(b) - np.uint64(1)
-        fields ^= b
+    binary = bin(fields)
+    indices = np.array([i for i, c in enumerate(binary) if c == '1'])
+    return 63 - (indices - 2)
 
 def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64):
     field = np.max(toNumber(field))
@@ -83,7 +82,7 @@ def toFen(board):
         x += 1
     fen += ' '
 
-    if board.player:
+    if board.isWhite:
         fen += 'w'
     else:
         fen += 'b'

@@ -310,6 +310,7 @@ class Board:
             oldEnPassant = self.en_passant>>np.uint64(8)
         self.en_passant = np.uint64(0)
         if not piece:
+            print(1)
             self.halfmove = 0
             self.pieceList[0] = nonzeroElements(self.pieceList[0]& ~fromField)
             if promotion:
@@ -327,6 +328,7 @@ class Board:
                 else:
                     self.en_passant = fromField<<np.uint64(8)
                 self.pieceList[0] = nonzeroElements(self.pieceList[0] & ~toField)
+                self.pieceList[0] = np.append(self.pieceList[0], toField)
             else:
                 if toField & oldEnPassant:
                     self.pieceList[0] = nonzeroElements(self.pieceList[0]& ~(oldEnPassant))  
@@ -359,15 +361,13 @@ class Board:
         if self.isWhite:
             if not(toField & self.black):
                 self.halfmove = 0
-            white = self.black & ~toField
-            self.black = (self.white | toField) & ~fromField
-            self.white = white
+            self.black = self.black & ~toField
+            self.white = (self.white | toField) & ~fromField
         else:
             if not(toField & self.white):
                 self.halfmove = 0
-            black = self.white & ~toField
-            self.white = (self.black | toField) & ~fromField
-            self.black = black
+            self.white = self.white & ~toField
+            self.black = (self.black | toField) & ~fromField
         self.isWhite = not self.isWhite
         return self
 
@@ -383,4 +383,5 @@ class Board:
 def getFen(fen):
     self = Board(fen)
     moves = self.getMoves()
-    return moves ##toFen(doMove(self,moves[0][0],moves[0][1],moves[0][2],moves[0][3],moves[0][4],moves[0][5]))
+    self.doMove(moves[0])
+    return toFen(self) ##toFen(doMove(self,moves[0][0],moves[0][1],moves[0][2],moves[0][3],moves[0][4],moves[0][5]))
