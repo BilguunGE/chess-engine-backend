@@ -323,9 +323,9 @@ class Board:
                     self.pieceList[4] = np.append(self.pieceList[4], toField)
             elif en_passant:
                 if self.isWhite:
-                    self.en_passant = fromField>>8
+                    self.en_passant = fromField>>np.uint64(8)
                 else:
-                    self.en_passant = fromField<<8
+                    self.en_passant = fromField<<np.uint64(8)
                 self.pieceList[0] = nonzeroElements(self.pieceList[0] & ~toField)
             else:
                 if toField & oldEnPassant:
