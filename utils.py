@@ -103,9 +103,9 @@ def toFen(board):
     fen += ' '
 
     if board.en_passant:
-        i = toNumber(board.en_passant)
-        y = (i % 8)
-        x = 8 - ((i - y) / 8)
+        i = np.max(toNumber(board.en_passant))
+        y = int((i % 8))
+        x = int(8 - ((i - y) / 8))
         fen += chr(y + 97) + str(x)
     else:
         fen += '-'
