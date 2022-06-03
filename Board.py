@@ -359,13 +359,15 @@ class Board:
         if self.isWhite:
             if not(toField & self.black):
                 self.halfmove = 0
-            self.white = self.black & ~toField
+            white = self.black & ~toField
             self.black = (self.white | toField) & ~fromField
+            self.white = white
         else:
             if not(toField & self.white):
                 self.halfmove = 0
-            self.black = self.white & ~toField
+            black = self.white & ~toField
             self.white = (self.black | toField) & ~fromField
+            self.black = black
         self.isWhite = not self.isWhite
         return self
 
