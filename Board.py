@@ -152,11 +152,15 @@ class Board:
             pieceFieldNumber = toNumber(n)
             possibleMoves = allMoves[2][pieceFieldNumber][1]
             colorShadowPieces = nonzeroElements(possibleMoves & color)
-            colorShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(colorShadowPieces)])
+            colorShadows = np.uint64(0)
+            if np.any(colorShadowPieces):
+                colorShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(colorShadowPieces)])
             newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
             if np.any(newMoves):
                 enemyShadowPieces = nonzeroElements(newMoves & enemy)
-                enemyShadows = np.bitwise_or.reduce(allShadows[0][n][toNumber(enemyShadowPieces)])
+                enemyShadows = np.uint64(0)
+                if np.any(enemyShadowPieces):
+                    enemyShadows = np.bitwise_or.reduce(allShadows[0][n][toNumber(enemyShadowPieces)])
                 newMoves &= ~enemyShadows
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
@@ -176,11 +180,15 @@ class Board:
             pieceFieldNumber = toNumber(n)
             possibleMoves = allMoves[3][pieceFieldNumber][1]
             colorShadowPieces = nonzeroElements(possibleMoves & color)
-            colorShadows = np.bitwise_or.reduce(allShadows[1][pieceFieldNumber][toNumber(colorShadowPieces)])
+            colorShadows = np.uint64(0)
+            if np.any(colorShadowPieces):
+                colorShadows = np.bitwise_or.reduce(allShadows[1][pieceFieldNumber][toNumber(colorShadowPieces)])
             newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
             if np.any(newMoves):
                 enemyShadowPieces = nonzeroElements(newMoves & enemy)
-                enemyShadows = np.bitwise_or.reduce(allShadows[1][n][toNumber(enemyShadowPieces)])
+                enemyShadows = np.uint64(0)
+                if np.any(enemyShadowPieces):
+                    enemyShadows = np.bitwise_or.reduce(allShadows[1][n][toNumber(enemyShadowPieces)])
                 newMoves &= ~enemyShadows
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
@@ -246,11 +254,15 @@ class Board:
             pieceFieldNumber = toNumber(n)
             possibleMoves = allMoves[2][pieceFieldNumber][1]
             colorShadowPieces = nonzeroElements(possibleMoves & color)
-            colorShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(colorShadowPieces)])
+            colorShadows = np.uint64(0)
+            if np.any(colorShadowPieces):
+                colorShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(colorShadowPieces)])
             newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
             if np.any(newMoves):
                 enemyShadowPieces = nonzeroElements(newMoves & enemy)
-                enemyShadows = np.bitwise_or.reduce(allShadows[0][n][toNumber(enemyShadowPieces)])
+                enemyShadows = np.uint64(0)
+                if np.any(enemyShadowPieces):
+                    enemyShadows = np.bitwise_or.reduce(allShadows[0][n][toNumber(enemyShadowPieces)])
                 newMoves &= ~enemyShadows
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
@@ -266,11 +278,15 @@ class Board:
             pieceFieldNumber = toNumber(n)
             possibleMoves = allMoves[3][pieceFieldNumber][1]
             colorShadowPieces = nonzeroElements(possibleMoves & color)
-            colorShadows = np.bitwise_or.reduce(allShadows[1][pieceFieldNumber][toNumber(colorShadowPieces)])
+            colorShadows = np.uint64(0)
+            if np.any(colorShadowPieces):
+                colorShadows = np.bitwise_or.reduce(allShadows[1][pieceFieldNumber][toNumber(colorShadowPieces)])
             newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
             if np.any(newMoves):
                 enemyShadowPieces = nonzeroElements(newMoves & enemy)
-                enemyShadows = np.bitwise_or.reduce(allShadows[1][n][toNumber(enemyShadowPieces)])
+                enemyShadows = np.uint64(0)
+                if np.any(enemyShadowPieces):
+                    enemyShadows = np.bitwise_or.reduce(allShadows[1][n][toNumber(enemyShadowPieces)])
                 newMoves &= ~enemyShadows
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
@@ -300,7 +316,7 @@ class Board:
         self.pieceList[2] = nonzeroElements(self.pieceList[2] & ~toField)
         self.pieceList[3] = nonzeroElements(self.pieceList[3] & ~toField)
         self.pieceList[4] = nonzeroElements(self.pieceList[4] & ~toField)
-        
+        self.pieceList[piece] = nonzeroElements(self.pieceList[piece] & ~fromField)
         if not persistant:
             self.moveHistoryAB.append(move)
 
@@ -310,9 +326,7 @@ class Board:
             oldEnPassant = self.en_passant>>np.uint64(8)
         self.en_passant = np.uint64(0)
         if not piece:
-            print(1)
             self.halfmove = 0
-            self.pieceList[0] = nonzeroElements(self.pieceList[0]& ~fromField)
             if promotion:
                 if promotion & 1:
                     self.pieceList[1] = np.append(self.pieceList[1], toField)
@@ -359,12 +373,12 @@ class Board:
                     self.black = (self.black & ~np.uint64(1)) | np.uint64(1 << 3)
                 self.all = self.black | self.white
         if self.isWhite:
-            if not(toField & self.black):
+            if (toField & self.black):
                 self.halfmove = 0
             self.black = self.black & ~toField
             self.white = (self.white | toField) & ~fromField
         else:
-            if not(toField & self.white):
+            if (toField & self.white):
                 self.halfmove = 0
             self.white = self.white & ~toField
             self.black = (self.black | toField) & ~fromField
