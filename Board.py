@@ -387,6 +387,11 @@ class Board:
                 else:
                     self.black = (self.black & ~castleRookFrom) | castleRookTo
                 self.all = self.black | self.white
+            elif piece == 5:
+                if self.isWhite:
+                    self.castle &= ~np.uint(3)
+                else:
+                    self.castle &= ~np.uint(12)
         if self.isWhite:
             if (toField & self.black):
                 self.halfmove = 0
