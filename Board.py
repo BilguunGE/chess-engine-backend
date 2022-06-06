@@ -80,7 +80,7 @@ class Board:
         allPinned = np.uint64(0)
         allPinned = pinned(self,color,enemy)
         checkFilter = np.uint64((1<<64)-1)
-        attacker = inCheck(self,color,enemy,self.isWhite)
+        attacker = inCheck(self,color,enemy,self.isWhite,self.all)
         if attacker:
             checkFilter = attacker
         moves.extend(self.getRookMoves(color,enemy,allPinned,checkFilter))
@@ -231,18 +231,19 @@ class Board:
             newMoves = (possibleMoves & ~shadowPieces)
             if np.any(newMoves):
                 for i in nonzeroElements(newMoves):
-                    if not attacked(self,enemy,self.isWhite,i):
+                    all = self.all & ~n
+                    if not attacked(self,enemy,self.isWhite,i,all):
                         moves.append((n,i,5,False,np.uint64(0),np.uint64(0)))
             if self.castle:
-                if not attacked(self,enemy,self.isWhite,n):
+                if not attacked(self,enemy,self.isWhite,n,self.all):
                     if (self.isWhite and (self.castle & 1)) or (not self.isWhite and (self.castle & 4)):
-                        if not (n << np.uint64(1) & self.all) and not (n << np.uint64(2) & self.all) and not attacked(self,enemy,self.isWhite,n << np.uint64(1)) and not attacked(self,enemy,self.isWhite,n << np.uint64(2)):
+                        if not (n << np.uint64(1) & self.all) and not (n << np.uint64(2) & self.all) and not attacked(self,enemy,self.isWhite,n << np.uint64(1),self.all) and not attacked(self,enemy,self.isWhite,n << np.uint64(2),self.all):
                             if self.isWhite:
                                 moves.append((n,n << np.uint64(2),5,False,np.uint64(1),np.uint64(0)))
                             else:
                                 moves.append((n,n << np.uint64(2),5,False,np.uint64(2),np.uint64(0)))
                     if (self.isWhite and (self.castle & 2)) or (not self.isWhite and (self.castle & 8)):
-                        if not (n >> np.uint64(1) & self.all) and not (n >> np.uint64(2) & self.all) and not (n >> np.uint64(3) & self.all) and not attacked(self,enemy,self.isWhite,n >> np.uint64(1)) and not attacked(self,enemy,self.isWhite,n >> np.uint64(2)):
+                        if not (n >> np.uint64(1) & self.all) and not (n >> np.uint64(2) & self.all) and not (n >> np.uint64(3) & self.all) and not attacked(self,enemy,self.isWhite,n >> np.uint64(1),self.all) and not attacked(self,enemy,self.isWhite,n >> np.uint64(2),self.all):
                             if self.isWhite:
                                 moves.append((n,n >> np.uint64(2),5,False,np.uint64(4),np.uint64(0)))
                             else:

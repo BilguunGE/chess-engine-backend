@@ -36,7 +36,7 @@ def bits(fields: np.uint64):
     indices = np.array([i for i, c in enumerate(binary) if c == '1'])
     return 63 - (indices - 2)
 
-def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64):
+def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
     field = np.max(toNumber(field))
     if np.any(enemy & board.pieceList[2] & allMoves[5][field][2]):
         return np.max(enemy & board.pieceList[2] & allMoves[5][field][2])
@@ -49,14 +49,14 @@ def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64):
     attackerPieces = np.append((allMoves[2][field][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[1])) & enemy), (allMoves[3][field][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[3])) & enemy))
     if np.any(attackerPieces):
         for n in nonzeroElements(attackerPieces):
-            blockers = between[field][toNumber(n)] & board.all
+            blockers = between[field][toNumber(n)] & all
             if not blockers:
                 return (between[field][toNumber(n)] | n)
     return np.uint64(0)
 
-def inCheck(board, color: np.uint64,enemy: np.uint64,white: bool):
+def inCheck(board, color: np.uint64,enemy: np.uint64,white: bool, all):
     kingN = nonzeroElements(board.pieceList[5] & color)
-    return attacked(board,enemy,white,kingN)
+    return attacked(board,enemy,white,kingN,all)
 
 def toFen(board):
     boardTxt = ['-']*64
