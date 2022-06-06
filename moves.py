@@ -7,8 +7,8 @@ def allMovesGen():
     while x < 8:
         y = 0
         while y < 8:
-            newMoves = np.array(0,dtype=np.uint64)
-            possibleCatches = np.array(0,dtype=np.uint64)
+            newMoves = np.array([],dtype=np.uint64)
+            possibleCatches = np.array([],dtype=np.uint64)
             _newMoves_ = np.uint64(0)
             _possibleCatches_ = np.uint64(0)
             if x == 1:
@@ -32,8 +32,8 @@ def allMovesGen():
     while x < 8:
         y = 0
         while y < 8:
-            newMoves = np.array(0,dtype=np.uint64)
-            possibleCatches = np.array(0,dtype=np.uint64)
+            newMoves = np.array([],dtype=np.uint64)
+            possibleCatches = np.array([],dtype=np.uint64)
             _newMoves_ = np.uint64(0)
             _possibleCatches_ = np.uint64(0)
             if y > 0 and x > 0:
@@ -57,7 +57,7 @@ def allMovesGen():
     while x < 8:
         y = 0
         while y < 8:
-            newMoves = np.array(0,dtype=np.uint64)
+            newMoves = np.array([],dtype=np.uint64)
             _newMoves_ = np.uint64(0)
             x1 = (x + 1) % 8
             y1 = (y + 1) % 8
@@ -80,7 +80,7 @@ def allMovesGen():
         while y < 8:
             x1 = x
             y1 = y
-            newMoves = np.array(0,dtype=np.uint64)
+            newMoves = np.array([],dtype=np.uint64)
             _newMoves_ = np.uint64(0)
             while x1 < 7 and y1 < 7:
                 x1 += 1

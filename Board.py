@@ -62,8 +62,8 @@ class Board:
                 self.castle |= np.uint8(8)
 
         if fen[3] != '-':
-            x = 8-int(fen[3])
-            y = ord(fen[3]) - 97
+            x = 8-int(fen[3][1])
+            y = ord(fen[3][0]) - 97
             self.en_passant |= np.uint64(1 << (x*8+y))
     
         self.isWhite = fen[1] == 'w'
@@ -98,23 +98,23 @@ class Board:
                 pieceFieldNumber = toNumber(n)
                 possibleMoves = allMoves[1][pieceFieldNumber][1][0]
                 possibleCatches = allMoves[1][pieceFieldNumber][1][1]
-                catches = np.bitwise_or.reduce(possibleCatches & (enemy | self.en_passant))
+                catches = (possibleCatches & (enemy | self.en_passant))
                 shadowPieces = np.bitwise_or.reduce(possibleMoves & self.all)
-                newMoves = ((possibleMoves & ~shadowPieces & ~(shadowPieces>>np.uint64(8))) | catches) & checkFilter
+                newMoves = np.append((possibleMoves & ~shadowPieces & ~(shadowPieces>>np.uint64(8))), catches) & checkFilter
                 if np.any(newMoves):
                     newMoves = nonzeroElements(newMoves)
-                    if np.any(allPinned & np.uint64(1 << pieceFieldNumber)):
+                    if np.any(allPinned & n):
                         king = np.max(color & self.pieceList[5])
                         kingNumber = toNumber(king)
-                        if (between[n][kingNumber] & newMoves) or (between[kingNumber][toNumber(newMoves)] & n):
-                            for i in newMoves[np.nonzero(newMoves)]:
+                        for i in nonzeroElements(newMoves):
+                            if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
                                 moves.append((n,i,0,(n>>np.uint64(16)==i),np.uint64(0),np.uint64(0)))
                     else:
                         promotions = nonzeroElements(newMoves & whitePromotions)
                         for i in promotions:
-                            x = 0
-                            while x < 3:
-                                moves.append((n,i,0,False,False,np.uint(1<<x)))
+                            x = 1
+                            while x < 5:
+                                moves.append((n,i,0,False,False,x))
                                 x += 1
                         newMoves = nonzeroElements(newMoves & ~np.bitwise_or.reduce(promotions))
                         for i in newMoves:
@@ -124,23 +124,24 @@ class Board:
                 pieceFieldNumber = toNumber(n)
                 possibleMoves = allMoves[0][pieceFieldNumber][1][0]
                 possibleCatches = allMoves[0][pieceFieldNumber][1][1]
-                catches = np.bitwise_or.reduce(possibleCatches & (enemy | self.en_passant))
+                catches = (possibleCatches & (enemy | self.en_passant))
                 shadowPieces = np.bitwise_or.reduce(possibleMoves & self.all)
-                newMoves = ((possibleMoves & ~shadowPieces & ~(shadowPieces<<np.uint64(8))) | catches) & checkFilter
+                newMoves = np.append((possibleMoves & ~shadowPieces & ~(shadowPieces<<np.uint64(8))), catches) & checkFilter
                 if np.any(newMoves):
                     newMoves = nonzeroElements(newMoves)
                     if np.any(allPinned & n):
                         king = np.max(color & self.pieceList[5])
                         kingNumber = toNumber(king)
-                        if (between[n][kingNumber] & newMoves) or (between[kingNumber][toNumber(newMoves)] & n):
-                            for i in newMoves[np.nonzero(newMoves)]:
+                        for i in nonzeroElements(newMoves):
+                            if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
                                 moves.append((n,i,0,(n<<np.uint64(16)==i),np.uint64(0),np.uint64(0)))
                     else:
                         promotions = nonzeroElements(newMoves & whitePromotions)
                         for i in promotions:
-                            x = 0
-                            while x < 3:
-                                moves.append((n,i,0,False,np.uint64(0),np.uint(1<<x)))
+                            x = 1
+                            while x < 5:
+                                moves.append((n,i,0,False,np.uint64(0),x))
+                                x += 1
                         newMoves = nonzeroElements(newMoves & ~np.bitwise_or.reduce(promotions))
                         for i in newMoves:
                             moves.append((n,i,0,(n<<np.uint64(16)==i),np.uint64(0),np.uint64(0)))
@@ -160,7 +161,7 @@ class Board:
                 enemyShadowPieces = nonzeroElements(newMoves & enemy)
                 enemyShadows = np.uint64(0)
                 if np.any(enemyShadowPieces):
-                    enemyShadows = np.bitwise_or.reduce(allShadows[0][n][toNumber(enemyShadowPieces)])
+                    enemyShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(enemyShadowPieces)])
                 newMoves &= ~enemyShadows
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
@@ -188,7 +189,7 @@ class Board:
                 enemyShadowPieces = nonzeroElements(newMoves & enemy)
                 enemyShadows = np.uint64(0)
                 if np.any(enemyShadowPieces):
-                    enemyShadows = np.bitwise_or.reduce(allShadows[1][n][toNumber(enemyShadowPieces)])
+                    enemyShadows = np.bitwise_or.reduce(allShadows[1][pieceFieldNumber][toNumber(enemyShadowPieces)])
                 newMoves &= ~enemyShadows
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
@@ -230,7 +231,7 @@ class Board:
             newMoves = (possibleMoves & ~shadowPieces)
             if np.any(newMoves):
                 for i in nonzeroElements(newMoves):
-                    if not attacked(self,enemy,toNumber(i),self.isWhite):
+                    if not attacked(self,enemy,self.isWhite,i):
                         moves.append((n,i,5,False,np.uint64(0),np.uint64(0)))
             if self.castle:
                 if not attacked(self,enemy,self.isWhite,n):
@@ -262,7 +263,7 @@ class Board:
                 enemyShadowPieces = nonzeroElements(newMoves & enemy)
                 enemyShadows = np.uint64(0)
                 if np.any(enemyShadowPieces):
-                    enemyShadows = np.bitwise_or.reduce(allShadows[0][n][toNumber(enemyShadowPieces)])
+                    enemyShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(enemyShadowPieces)])
                 newMoves &= ~enemyShadows
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
@@ -286,7 +287,7 @@ class Board:
                 enemyShadowPieces = nonzeroElements(newMoves & enemy)
                 enemyShadows = np.uint64(0)
                 if np.any(enemyShadowPieces):
-                    enemyShadows = np.bitwise_or.reduce(allShadows[1][n][toNumber(enemyShadowPieces)])
+                    enemyShadows = np.bitwise_or.reduce(allShadows[1][pieceFieldNumber][toNumber(enemyShadowPieces)])
                 newMoves &= ~enemyShadows
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
@@ -301,24 +302,40 @@ class Board:
         return moves
     
     def doMove(self, move, persistant= False):
+        ##pieceNr == 0-Pawn, 1-Rook, 2-Knight, 3-Bishop, 4-Queen, 5-King
         fromField = move[0]
         toField = move[1]
         piece = move[2]
         en_passant = move[3]
         castle = move[4]
         promotion = move[5]
-        ##pieceNr == 0-Pawn, 1-Rook, 2-Knight, 3-Bishop, 4-Queen, 5-King
+        undoEnPassant = self.en_passant
+        undoHalfmove = self.halfmove
+        undoCastle = self.castle
+        catch = -1
+        castleRookTo = 0
+        castleRookFrom = 0
+        if np.any(self.pieceList[0] & toField):
+            catch = 0
+            self.pieceList[0] = nonzeroElements(self.pieceList[0] & ~toField)
+        elif np.any(self.pieceList[1] & toField):
+            catch = 1
+            self.pieceList[1] = nonzeroElements(self.pieceList[1] & ~toField)
+        elif np.any(self.pieceList[2] & toField):
+            catch = 2
+            self.pieceList[2] = nonzeroElements(self.pieceList[2] & ~toField)
+        elif np.any(self.pieceList[3] & toField):
+            catch = 3
+            self.pieceList[3] = nonzeroElements(self.pieceList[3] & ~toField)
+        elif np.any(self.pieceList[4] & toField):
+            catch = 4
+            self.pieceList[4] = nonzeroElements(self.pieceList[4] & ~toField)
+
+        self.pieceList[piece] = nonzeroElements(self.pieceList[piece] & ~fromField)
+
         self.all = (self.all | toField) & ~fromField
         self.fullmove += 1
         self.halfmove += 1
-        self.pieceList[0] = nonzeroElements(self.pieceList[0] & ~toField)
-        self.pieceList[1] = nonzeroElements(self.pieceList[1] & ~toField)
-        self.pieceList[2] = nonzeroElements(self.pieceList[2] & ~toField)
-        self.pieceList[3] = nonzeroElements(self.pieceList[3] & ~toField)
-        self.pieceList[4] = nonzeroElements(self.pieceList[4] & ~toField)
-        self.pieceList[piece] = nonzeroElements(self.pieceList[piece] & ~fromField)
-        if not persistant:
-            self.moveHistoryAB.append(move)
 
         if self.isWhite:
             oldEnPassant = self.en_passant<<np.uint64(8)
@@ -328,14 +345,7 @@ class Board:
         if not piece:
             self.halfmove = 0
             if promotion:
-                if promotion & 1:
-                    self.pieceList[1] = np.append(self.pieceList[1], toField)
-                elif promotion & 2:
-                    self.pieceList[2] = np.append(self.pieceList[2], toField)
-                elif promotion & 4:
-                    self.pieceList[3] = np.append(self.pieceList[3], toField)
-                elif promotion & 8:
-                    self.pieceList[4] = np.append(self.pieceList[4], toField)
+                self.pieceList[promotion] = np.append(self.pieceList[promotion], toField)
             elif en_passant:
                 if self.isWhite:
                     self.en_passant = fromField>>np.uint64(8)
@@ -360,17 +370,22 @@ class Board:
                     self.castle &= ~possibleCastles[np.nonzero(possibleCastle)]
             elif castle:
                 if castle & 1:
-                    self.pieceList[1] = nonzeroElements(np.append(self.pieceList[1], np.uint64(1 << 61)) & ~np.uint64(1 << 63))
-                    self.white = (self.white & ~np.uint64(1 << 63)) | np.uint64(1 << 61)
+                    castleRookTo = np.uint64(1 << 61)
+                    castleRookFrom = np.uint64(1 << 63)
                 elif castle & 4:
-                    self.pieceList[1] = nonzeroElements(np.append(self.pieceList[1], np.uint64(1 << 5)) & ~np.uint64(1 << 7))
-                    self.black = (self.black & ~np.uint64(1 << 7)) | np.uint64(1 << 5)
+                    castleRookTo = np.uint64(1 << 5)
+                    castleRookFrom = np.uint64(1 << 7)
                 elif castle & 2:
-                    self.pieceList[1] = nonzeroElements(np.append(self.pieceList[1], np.uint64(1 << 59)) & ~np.uint64(1 << 56))
-                    self.white = (self.white & ~np.uint64(1 << 56)) | np.uint64(1 << 59)
-                elif castle & 8:
-                    self.pieceList[1] = nonzeroElements(np.append(self.pieceList[1], np.uint64(1 << 3)) & ~np.uint64(1))
-                    self.black = (self.black & ~np.uint64(1)) | np.uint64(1 << 3)
+                    castleRookTo = np.uint64(1 << 59)
+                    castleRookFrom = np.uint64(1 << 56)
+                else:
+                    castleRookTo = np.uint64(1 << 3)
+                    castleRookFrom = np.uint64(1 << 1)
+                self.pieceList[1] = nonzeroElements(np.append(self.pieceList[1], castleRookTo) & ~castleRookFrom)
+                if self.isWhite:
+                    self.white = (self.white & ~castleRookFrom) | castleRookTo
+                else:
+                    self.black = (self.black & ~castleRookFrom) | castleRookTo
                 self.all = self.black | self.white
         if self.isWhite:
             if (toField & self.black):
@@ -383,10 +398,41 @@ class Board:
             self.white = self.white & ~toField
             self.black = (self.black | toField) & ~fromField
         self.isWhite = not self.isWhite
+
+        if not persistant:
+            self.moveHistoryAB.append((move,undoHalfmove,undoCastle,undoEnPassant,catch,castleRookFrom,castleRookTo))
+
         return self
 
-    def undoMove(self, move):
-        pass
+    def undoMove(self, undoMove):
+        move = undoMove[0]
+        fromField = move[0]
+        toField = move[1]
+        piece = move[2]
+        castle = move[4]
+        promotion = move[5]
+        catch = undoMove[4]
+        castleRookFrom = undoMove[5]
+        castleRookTo = undoMove[6]
+
+        self.halfmove = undoMove[1]
+        self.castle = undoMove[2]
+        self.en_passant = undoMove[3]
+        self.fullmove -= 1
+
+        self.pieceList[piece] = np.append(nonzeroElements(self.pieceList[piece] & ~toField),fromField)
+
+        if promotion:
+            self.pieceList[promotion] = nonzeroElements(self.pieceList[promotion] & ~toField)
+
+        if not (catch == -1):
+            self.pieceList[catch] = np.append(self.pieceList[catch], toField)
+
+        if castle:
+            self.pieceList[1] = np.append(nonzeroElements(self.pieceList[piece] & ~castleRookTo),castleRookFrom)
+
+
+        return self
 
     def undoAllMoves(self):
         while len(self.moveHistoryAB) > 0:

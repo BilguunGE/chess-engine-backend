@@ -12,6 +12,20 @@ def fieldToString(field: np.uint64):
     txt = 'abcdefgh'[int(y)] + '12345678'[int(7-x)]
     return txt
 
+def numberToPiece(number):
+    if number == 0:
+        return 'Pawn'
+    if number == 1:
+        return 'Rook'
+    if number == 2:
+        return 'Knight'
+    if number == 3:
+        return 'Bishop'
+    if number == 4:
+        return 'Queen'
+    if number == 5:
+        return 'King'
+    return '-'
 
 def toNumber(field: Union[np.ndarray, np.uint64]) -> Union[np.ndarray, np.uint64]:
     field = np.ceil(np.log2(field)).astype(int)
