@@ -118,7 +118,9 @@ class Board:
                                 x += 1
                         newMoves = nonzeroElements(newMoves & ~np.bitwise_or.reduce(promotions))
                         for i in newMoves:
-                            moves.append((n,i,0,(n>>np.uint64(16)==i),np.uint64(0),np.uint64(0)))
+                            all = self.all & ~(n | (i << np.uint64(8)))
+                            if not (self.en_passant & i) or not inCheck(self,color,enemy,self.isWhite,all):
+                                moves.append((n,i,0,(n>>np.uint64(16)==i),np.uint64(0),np.uint64(0)))
         else:
             for n in nonzeroElements(self.pieceList[0] & color):
                 pieceFieldNumber = toNumber(n)
@@ -144,7 +146,9 @@ class Board:
                                 x += 1
                         newMoves = nonzeroElements(newMoves & ~np.bitwise_or.reduce(promotions))
                         for i in newMoves:
-                            moves.append((n,i,0,(n<<np.uint64(16)==i),np.uint64(0),np.uint64(0)))
+                            all = self.all & ~(n | (i >> np.uint64(8)))
+                            if not (self.en_passant & i) or not inCheck(self,color,enemy,self.isWhite,all):
+                                moves.append((n,i,0,(n<<np.uint64(16)==i),np.uint64(0),np.uint64(0)))
         return moves
 
     def getRookMoves(self,color,enemy,allPinned,checkFilter):
