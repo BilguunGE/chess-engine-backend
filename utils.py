@@ -212,29 +212,27 @@ def alphabeta(board, depth, alpha, beta, maximizingPlayer, list):
         if len(board.moveHistoryAB) > 0:
             move = board.moveHistoryAB.pop()
             list.append((move, value))
-        #    board.undoMove(move)
+            board.undoMove(move)
         return value
     if maximizingPlayer:
         value = float('-inf')
         for child in board.getMoves():
-            newBoard = deepcopy(board)
-            value = max(value, alphabeta(newBoard.doMove(child), depth-1, alpha, beta, False,list))
+            value = max(value, alphabeta(board.doMove(child), depth-1, alpha, beta, False,list))
             if len(board.moveHistoryAB) > 0:
-               move = board.moveHistoryAB.pop()
-               list.append((move, value))
-            #    board.undoMove(move)
+                move = board.moveHistoryAB.pop()
+                list.append((move, value))
+                board.undoMove(move)
             if value >= beta:
                 break
             alpha = max(alpha, value)
     else:
         value = float('inf')
         for child in board.getMoves():
-            newBoard = deepcopy(board)
-            value = min(value, alphabeta(newBoard.doMove(child), depth-1, alpha, beta, True, list ))
+            value = min(value, alphabeta(board.doMove(child), depth-1, alpha, beta, True, list ))
             if len(board.moveHistoryAB) > 0:
-               move = board.moveHistoryAB.pop()
-               list.append((move, value))
-            #    board.undoMove(move)
+                move = board.moveHistoryAB.pop()
+                list.append((move, value))
+                board.undoMove(move)
             if value <= alpha:
                 break
             beta = min(beta, value)
