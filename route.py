@@ -11,7 +11,7 @@ def initBoard(fenString):
 
 def getMoves():
     result = []
-    iterativeDeepening(500, deepcopy(board), -10000, 10000, False, result)
+    iterativeDeepening(500, board, -10000, 10000, False, result)
     return movesToJSON(result)
 
 def testMoves():
