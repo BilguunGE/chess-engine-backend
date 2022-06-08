@@ -31,10 +31,11 @@ def toNumber(field: Union[np.ndarray, np.uint64]) -> Union[np.ndarray, np.uint64
     field = np.ceil(np.log2(field)).astype(int)
     return field
 
-def bits(fields: np.uint64):
-    binary = bin(fields)
-    indices = np.array([i for i, c in enumerate(binary) if c == '1'])
-    return 63 - (indices - 2)
+def bits(n):
+    while n:
+        b = n & (~n+np.uint(1))
+        yield toNumber(b)
+        n ^= b
 
 def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
     if not np.any(field):
@@ -58,9 +59,9 @@ def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
     return np.uint64(0)
 
 
-def inCheck(board, color: np.uint64, enemy: np.uint64, white: bool):
+def inCheck(board, color: np.uint64, enemy: np.uint64, white: bool, all):
     kingN = nonzeroElements(board.pieceList[5] & color)
-    return attacked(board, enemy, white, kingN, board.all)
+    return attacked(board, enemy, white, kingN, all)
 
 def toFen(board):
     boardTxt = ['-']*64
@@ -77,7 +78,7 @@ def toFen(board):
     for n in board.pieceList[5]:
         boardTxt[toNumber(n)] = 'k'
     for n in bits(board.white):
-        boardTxt[int(n)] = boardTxt[int(n)].upper()
+        boardTxt[n] = boardTxt[n].upper()
     fen = ''
     x = 0
     i = 0

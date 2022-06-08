@@ -1,13 +1,11 @@
 from moves import *
 import numpy as np
 from utils import *
-import random
 
 whitePromotions = np.uint64(18374686479671623680)
 blackPromotions = np.uint64(255)
 castleBoards = np.array([9223372036854775808,72057594037927936,128,1],dtype=np.uint64)
 possibleCastles = np.array([1,2,4,8],dtype=np.uint8)
-zobTable = [[[random.randint(1,2**64 - 1) for i in range(12)]for j in range(8)]for k in range(8)]
 
 max = 'w'
 
@@ -23,7 +21,6 @@ class Board:
     fullmove = 1
     isWhite = True
     moveHistoryAB = []
-    ttable = {}
 
     def __init__(self,fenString):
         fen = fenString.split()
@@ -83,7 +80,7 @@ class Board:
         allPinned = np.uint64(0)
         allPinned = pinned(self,color,enemy)
         checkFilter = np.uint64((1<<64)-1)
-        attacker = inCheck(self,color,enemy,self.isWhite)
+        attacker = inCheck(self,color,enemy,self.isWhite,self.all)
         if attacker:
             checkFilter = attacker
         moves.extend(self.getRookMoves(color,enemy,allPinned,checkFilter))
@@ -411,7 +408,6 @@ class Board:
             self.white = self.white & ~toField
             self.black = (self.black | toField) & ~fromField
         self.isWhite = not self.isWhite
-
         if not persistant:
             self.moveHistoryAB.append((move,undoHalfmove,undoCastle,undoEnPassant,catch,castleRookFrom,castleRookTo))
 
@@ -452,56 +448,9 @@ class Board:
             move = self.moveHistoryAB.pop()
             self.undoMove(move)
 
-    def deepcopy(self):
-        return Board(toFen(self))
-    
-    def indexing(self, piece):
-    # mapping each piece to a particular number
-        if (piece=='P'):
-            return 0
-        if (piece=='N'):
-            return 1
-        if (piece=='B'):
-            return 2
-        if (piece=='R'):
-            return 3
-        if (piece=='Q'):
-            return 4
-        if (piece=='K'):
-            return 5
-        if (piece=='p'):
-            return 6
-        if (piece=='n'):
-            return 7
-        if (piece=='b'):
-            return 8
-        if (piece=='r'):
-            return 9
-        if (piece=='q'):
-            return 10
-        if (piece=='k'):
-            return 11
-        else:
-            return -1
 
-    def getHash(self):
-        board = [
-            ['-', '-', '-', 'K', '-', '-', '-', '-'],
-            ['-', 'R', '-', '-', '-', '-', 'Q', '-'],
-            ['-', '-', '-', '-', '-', '-', '-', '-'],
-            ['-', 'P', '-', '-', '-', '-', 'p', '-'],
-            ['-', '-', '-', '-', '-', 'p', '-', '-'],
-            ['-', '-', '-', '-', '-', '-', '-', '-'],
-            ['p', '-', '-', '-', 'b', '-', '-', 'q'],
-            ['-', '-', '-', '-', 'n', '-', '-', 'k']
-        ]
-        hash = 0
-        for i in range(8):
-            for j in range(8):
-                if board[i][j] != '-':
-                    piece = self.indexing(board[i][j])
-                    hash ^= zobTable[i][j][piece]
-        return hash
-
-    def getEntry(self):
-        return self.ttable.get(self.getHash())
+def getFen(fen):
+    self = Board(fen)
+    moves = self.getMoves()
+    self.doMove(moves[0])
+    return toFen(self) ##toFen(doMove(self,moves[0][0],moves[0][1],moves[0][2],moves[0][3],moves[0][4],moves[0][5]))
