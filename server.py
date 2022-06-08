@@ -1,15 +1,27 @@
 from flask import Flask, request
 from flask_cors import CORS, cross_origin
-from route import getMoves
+import route
 
 app = Flask(__name__)
 CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 
-
-@app.route('/moves', methods=['GET','POST'])
+@app.route('/initBoard', methods=['POST'])
 @cross_origin()
-def Moves():
+def initBoard():
     FEN = request.json['FEN']
-    return getMoves(FEN)
+    return route.initBoard(FEN)
+
+@app.route('/getMoves', methods=['GET'])
+@cross_origin()
+def getMoves():
+    return route.getMoves()
+
+
+@app.route('/doMove', methods=['POST'])
+@cross_origin()
+def doMove():
+    move = request.json['move']
+    return route.doMove(move)
+

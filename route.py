@@ -1,18 +1,35 @@
 from Board import *
-from utils import fieldToString, getFigure
+from utils import toFen, toNumber, movesToJSON, iterativeDeepening
+from copy import deepcopy
 
+board  = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
 
-def getMoves(fenString):
-    b = Board(fenString)
-    moves = b.getMoves()
-    list = []
-    for move in moves:
-        object = {}
-        object['fromField'] = fieldToString(move[0])
-        object['toField'] = fieldToString(move[1])
-        object['figure'] = getFigure(move[2])
-        object['enPassant'] = bool(move[3])
-        object['castle'] = bool(move[4])
-        object['promotion'] = bool(move[5])
-        list.append(object)
-    return {'moves': list}
+def initBoard(fenString):
+    global board
+    board = Board(fenString)
+    return getMoves()
+
+def getMoves():
+    result = []
+    iterativeDeepening(500, deepcopy(board), -10000, 10000, False, result)
+    return movesToJSON(result)
+
+def testMoves():
+    b = board
+    for i in range(10):
+        print(toFen(b))
+        moves = b.getMoves()
+        b.doMove(moves[0])
+    return {'test':'ok'}
+
+def doMove(move):
+    fromField= toNumber(move['fromField'])
+    toField= toNumber(move['toField'])
+    figure = toNumber(move['figure'])
+    enPassant = bool(move['enPassant'])
+    castle = bool(move['castle'])
+    promotion = bool(move['promotion'])
+    board.doMove((fromField, toField, figure, enPassant, castle, promotion))
+    return 200
+
+    

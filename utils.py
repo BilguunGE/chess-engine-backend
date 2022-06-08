@@ -1,8 +1,8 @@
 from typing import Union
 import numpy as np
 from moves import *
-import math
 import time
+from copy import deepcopy
 
 
 def fieldToString(field: np.uint64):
@@ -37,6 +37,9 @@ def bits(fields: np.uint64):
     return 63 - (indices - 2)
 
 def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
+    if not np.any(field):
+        print('inside')
+        return np.uint64(0)
     field = np.max(toNumber(field))
     if np.any(enemy & board.pieceList[2] & allMoves[5][field][2]):
         return np.max(enemy & board.pieceList[2] & allMoves[5][field][2])
@@ -54,9 +57,10 @@ def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
                 return (between[field][toNumber(n)] | n)
     return np.uint64(0)
 
-def inCheck(board, color: np.uint64,enemy: np.uint64,white: bool, all):
+
+def inCheck(board, color: np.uint64, enemy: np.uint64, white: bool):
     kingN = nonzeroElements(board.pieceList[5] & color)
-    return attacked(board,enemy,white,kingN,all)
+    return attacked(board, enemy, white, kingN, board.all)
 
 def toFen(board):
     boardTxt = ['-']*64
@@ -73,7 +77,7 @@ def toFen(board):
     for n in board.pieceList[5]:
         boardTxt[toNumber(n)] = 'k'
     for n in bits(board.white):
-        boardTxt[n] = boardTxt[n].upper()
+        boardTxt[int(n)] = boardTxt[int(n)].upper()
     fen = ''
     x = 0
     i = 0
@@ -162,20 +166,17 @@ def isBeat(isBeatable):
 def isGameDone(board):
     return False
 
-def evalBoard(board):
-    return 0
-
 def now():
     return time.time()*1000
 
-def iterativeDeepening(timeLimit, board, depth, alpha, beta, maximizingPlayer):
+def iterativeDeepening(timeLimit, board, alpha, beta, maximizingPlayer, list):
     endTime = now() + timeLimit
     depth = 1
     result = 0
     while True:
         if now() >= endTime:
             break
-        result = alphabeta(board, depth, alpha, beta, maximizingPlayer)
+        result = alphabeta(board, depth, alpha, beta, maximizingPlayer, list)
         depth += 1
     return result
 
@@ -187,33 +188,104 @@ def minimax(board, depth, maximizingPlayer):
     if maximizingPlayer:
         value = float('-inf')
         for child in board.getMoves():
-            value = math.max(value, minimax(board.doMove(child), depth-1, False))
+            value = max(value, minimax(board.doMove(child), depth-1, False))
         return value
     else:
         value = float('inf')
         for child in board.getMoves():
-            value = math.min(value, minimax(board.doMove(child), depth-1, True))
+            value = min(value, minimax(board.doMove(child), depth-1, True))
         return value
 
 
-def alphabeta(board, depth, alpha, beta, maximizingPlayer):
+def alphabeta(board, depth, alpha, beta, maximizingPlayer, list):
+    #objFound = board.getEntry()
+    #if objFound is not None:
+    #    if objFound.get('lowerbound', float('-inf'))>= beta:
+    #         return objFound['lowerbound']
+    #    if objFound.get('upperbound', float('inf')) <= alpha:
+    #         return objFound['upperbound']
+    #    alpha = max(alpha, objFound.get('lowerbound', float('-inf')))
+    #    beta = min(beta, objFound.get('upperbound', float('inf')))
     if depth == 0 or isGameDone(board):
         value = evalBoard(board)
-        board.undoAllMoves()
+        if len(board.moveHistoryAB) > 0:
+            move = board.moveHistoryAB.pop()
+            list.append((move, value))
+        #    board.undoMove(move)
         return value
     if maximizingPlayer:
         value = float('-inf')
         for child in board.getMoves():
-            value = math.max(value, alphabeta(board.doMove(child), depth-1, alpha, beta, False))
+            newBoard = deepcopy(board)
+            value = max(value, alphabeta(newBoard.doMove(child), depth-1, alpha, beta, False,list))
+            if len(board.moveHistoryAB) > 0:
+               move = board.moveHistoryAB.pop()
+               list.append((move, value))
+            #    board.undoMove(move)
             if value >= beta:
                 break
-            alpha = math.max(alpha, value)
-        return value
+            alpha = max(alpha, value)
     else:
         value = float('inf')
         for child in board.getMoves():
-            value = math.min(value, alphabeta(board.doMove(child), depth-1, alpha, beta, True))
+            newBoard = deepcopy(board)
+            value = min(value, alphabeta(newBoard.doMove(child), depth-1, alpha, beta, True, list ))
+            if len(board.moveHistoryAB) > 0:
+               move = board.moveHistoryAB.pop()
+               list.append((move, value))
+            #    board.undoMove(move)
             if value <= alpha:
                 break
-            beta = math.min(beta, value)
-        return value
+            beta = min(beta, value)
+
+    #if value <= alpha:
+    #    id = board.getHash()
+    #    board.ttable.update({id: {'upperbound': value}})
+    #if value > alpha and value < beta:
+    #    id = board.getHash()
+    #    board.ttable.update({id: {'lowerbound': value, 'upperbound': value}})
+    #if value >= beta:
+    #    id = board.getHash()
+    #    board.ttable.update({id: {'lowerbound': value}})
+    return value
+
+
+
+def evalBoard(board):
+    color = board.white
+    enemy = board.black
+    if not board.isWhite:
+        color = board.black
+        enemy = board.white
+    pawnDelta = nonzeroElements(
+        board.pieceList[0] & color).size - nonzeroElements(board.pieceList[0] & enemy).size
+    rookDelta = nonzeroElements(
+        board.pieceList[1] & color).size - nonzeroElements(board.pieceList[1] & enemy).size
+    knightDelta = nonzeroElements(
+        board.pieceList[2] & color).size - nonzeroElements(board.pieceList[2] & enemy).size
+    bishopDelta = nonzeroElements(
+        board.pieceList[3] & color).size - nonzeroElements(board.pieceList[3] & enemy).size
+    queenDelta = nonzeroElements(
+        board.pieceList[4] & color).size - nonzeroElements(board.pieceList[4] & enemy).size
+    check = inCheck(board, enemy, color, not board.isWhite) - \
+        inCheck(board, color, enemy, board.isWhite)
+    # TODO 1: include  checkmate (very high value), king of the hill (very high value), remis (negative value)
+    # TODO 2: implement multiple evaluation functions => z.B. Ruhesuche bei vielen Figuren
+    return 10 * check + 9 * queenDelta + 5 * rookDelta + 3 * knightDelta + 3 * bishopDelta + 1 * pawnDelta
+
+
+def movesToJSON(moves):
+    list = []
+    for move in moves:
+        value = move[1]
+        move = move[0][0]
+        object = {}
+        object['fromField'] = fieldToString(move[0])
+        object['toField'] = fieldToString(move[1])
+        object['figure'] = getFigure(move[2])
+        object['enPassant'] = bool(move[3])
+        object['castle'] = bool(move[4])
+        object['promotion'] = bool(move[5])
+        object['value'] = value
+        list.append(object)
+    return {'moves': list}
