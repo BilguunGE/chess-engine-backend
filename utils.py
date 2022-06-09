@@ -42,15 +42,15 @@ def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
         print('inside')
         return np.uint64(0)
     field = np.max(toNumber(field))
-    if np.any(enemy & board.pieceList[2] & allMoves[5][field][2]):
-        return np.max(enemy & board.pieceList[2] & allMoves[5][field][2])
-    if np.any(enemy & board.pieceList[5] & allMoves[4][field][2]):
-        return np.max(enemy & board.pieceList[5] & allMoves[4][field][2])
-    if np.any(white and np.any(enemy & board.pieceList[0] & allMoves[1][field][2][1])):
-        return np.max(enemy & board.pieceList[0] & allMoves[1][field][2][1])
-    if np.any(not white and np.any(enemy & board.pieceList[0] & allMoves[0][field][2][1])):
-        return np.max(enemy & board.pieceList[0] & allMoves[0][field][2][1])
-    attackerPieces = np.append((allMoves[2][field][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[1])) & enemy), (allMoves[3][field][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[3])) & enemy))
+    if (enemy & board.pieceBitboards[2] & allMoves[5][field][2]):
+        return (enemy & board.pieceBitboards[2] & allMoves[5][field][2])
+    if (enemy & board.pieceBitboards[5] & allMoves[4][field][2]):
+        return (enemy & board.pieceBitboards[5] & allMoves[4][field][2])
+    if white and (enemy & board.pieceBitboards[0] & allMoves[1][field][2][1]):
+        return (enemy & board.pieceBitboards[0] & allMoves[1][field][2][1])
+    if not white and (enemy & board.pieceBitboards[0] & allMoves[0][field][2][1]):
+        return (enemy & board.pieceBitboards[0] & allMoves[0][field][2][1])
+    attackerPieces = np.append((allMoves[2][field][1] & (board.pieceBitboards[4] | board.pieceBitboards[1]) & enemy), (allMoves[3][field][1] & (board.pieceBitboards[4] | board.pieceBitboards[3]) & enemy))
     if np.any(attackerPieces):
         for n in nonzeroElements(attackerPieces):
             blockers = between[field][toNumber(n)] & all
@@ -166,6 +166,18 @@ def isBeat(isBeatable):
 
 def isGameDone(board):
     return False
+
+def checkmate(board):
+    if board.isWhite:
+        color = board.white
+        enemy = board.black
+    else:
+        enemy = board.white
+        color = board.black
+    return (board.moves == [] and inCheck(board, color, enemy, board.isWhite, board.all))
+
+def remis(board):
+    return (board.halfmove == 50 or board.moves == [])
 
 def now():
     return time.time()*1000
