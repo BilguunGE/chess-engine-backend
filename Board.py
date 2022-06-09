@@ -105,7 +105,7 @@ class Board:
     def getPawnMoves(self,color,enemy,allPinned,checkFilter):
         if self.isWhite:
             for n in nonzeroElements(self.pieceList[0] & color):
-                pieceFieldNumber = toNumber(n)
+                pieceFieldNumber = np.max(toNumber(n))
                 possibleMoves = allMoves[1][pieceFieldNumber][1][0]
                 possibleCatches = allMoves[1][pieceFieldNumber][1][1]
                 catches = (possibleCatches & (enemy | self.en_passant))
@@ -115,7 +115,7 @@ class Board:
                     newMoves = nonzeroElements(newMoves)
                     if np.any(allPinned & n):
                         king = np.max(color & self.pieceList[5])
-                        kingNumber = toNumber(king)
+                        kingNumber = np.max(toNumber(king))
                         for i in nonzeroElements(newMoves):
                             if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
                                 self.moves.append((n,i,0,(n>>np.uint64(16)==i),np.uint64(0),np.uint64(0)))
@@ -133,7 +133,7 @@ class Board:
                                 self.moves.append((n,i,0,(n>>np.uint64(16)==i),np.uint64(0),np.uint64(0)))
         else:
             for n in nonzeroElements(self.pieceList[0] & color):
-                pieceFieldNumber = toNumber(n)
+                pieceFieldNumber = np.max(toNumber(n))
                 possibleMoves = allMoves[0][pieceFieldNumber][1][0]
                 possibleCatches = allMoves[0][pieceFieldNumber][1][1]
                 catches = (possibleCatches & (enemy | self.en_passant))
@@ -143,7 +143,7 @@ class Board:
                     newMoves = nonzeroElements(newMoves)
                     if np.any(allPinned & n):
                         king = np.max(color & self.pieceList[5])
-                        kingNumber = toNumber(king)
+                        kingNumber = np.max(toNumber(king))
                         for i in nonzeroElements(newMoves):
                             if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
                                 self.moves.append((n,i,0,(n<<np.uint64(16)==i),np.uint64(0),np.uint64(0)))
@@ -162,7 +162,7 @@ class Board:
 
     def getRookMoves(self,color,enemy,allPinned,checkFilter):
         for n in nonzeroElements(self.pieceList[1] & color):
-            pieceFieldNumber = toNumber(n)
+            pieceFieldNumber = np.max(toNumber(n))
             possibleMoves = allMoves[2][pieceFieldNumber][1]
             colorShadowPieces = nonzeroElements(possibleMoves & color)
             colorShadows = np.uint64(0)
@@ -178,7 +178,7 @@ class Board:
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
                         king = nonzeroElements(color & self.pieceList[5])
-                        kingNumber = toNumber(king)
+                        kingNumber = np.max(toNumber(king))
                         for i in newMoves:
                             if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
                                 self.moves.append((n,i,1,False,np.uint64(0),np.uint64(0)))
@@ -188,7 +188,7 @@ class Board:
 
     def getBishopMoves(self,color,enemy,allPinned,checkFilter):
         for n in nonzeroElements(self.pieceList[3] & color):
-            pieceFieldNumber = toNumber(n)
+            pieceFieldNumber = np.max(toNumber(n))
             possibleMoves = allMoves[3][pieceFieldNumber][1]
             colorShadowPieces = nonzeroElements(possibleMoves & color)
             colorShadows = np.uint64(0)
@@ -204,7 +204,7 @@ class Board:
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
                         king = nonzeroElements(color & self.pieceList[5])
-                        kingNumber = toNumber(king)
+                        kingNumber = np.max(toNumber(king))
                         for i in newMoves:
                             if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
                                 self.moves.append((n,i,3,False,np.uint64(0),np.uint64(0)))
@@ -214,7 +214,7 @@ class Board:
 
     def getKnightMoves(self,color,allPinned,checkFilter):
         for n in nonzeroElements(self.pieceList[2] & color):
-            pieceFieldNumber = toNumber(n)
+            pieceFieldNumber = np.max(toNumber(n))
             possibleMoves = allMoves[5][pieceFieldNumber][1]
             shadowPieces = np.bitwise_or.reduce(possibleMoves & color)
             newMoves = (possibleMoves & ~shadowPieces) & checkFilter
@@ -222,7 +222,7 @@ class Board:
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
                         king = nonzeroElements(color & self.pieceList[5])
-                        kingNumber = toNumber(king)
+                        kingNumber = np.max(toNumber(king))
                         for i in newMoves:
                             if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
                                 self.moves.append((n,i,2,False,np.uint64(0),np.uint64(0)))
@@ -232,7 +232,7 @@ class Board:
     
     def getKingMoves(self,color,enemy):
         for n in nonzeroElements(self.pieceList[5] & color):
-            pieceFieldNumber = toNumber(n)
+            pieceFieldNumber = np.max(toNumber(n))
             possibleMoves = allMoves[4][pieceFieldNumber][1]
             shadowPieces = np.bitwise_or.reduce(possibleMoves & color)
             newMoves = (possibleMoves & ~shadowPieces)
@@ -258,7 +258,7 @@ class Board:
     
     def getQueenMoves(self,color,enemy,allPinned,checkFilter):
         for n in nonzeroElements(self.pieceList[4] & color):
-            pieceFieldNumber = toNumber(n)
+            pieceFieldNumber = np.max(toNumber(n))
             possibleMoves = allMoves[2][pieceFieldNumber][1]
             colorShadowPieces = nonzeroElements(possibleMoves & color)
             colorShadows = np.uint64(0)
@@ -274,7 +274,7 @@ class Board:
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
                         king = nonzeroElements(color & self.pieceList[5])
-                        kingNumber = toNumber(king)
+                        kingNumber = np.max(toNumber(king))
                         for i in newMoves:
                             if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
                                 self.moves.append((n,i,4,False,np.uint64(0),np.uint64(0)))
@@ -282,7 +282,7 @@ class Board:
                     for i in newMoves:
                         self.moves.append((n,i,4,False,np.uint64(0),np.uint64(0)))
         for n in nonzeroElements(self.pieceList[4] & color):
-            pieceFieldNumber = toNumber(n)
+            pieceFieldNumber = np.max(toNumber(n))
             possibleMoves = allMoves[3][pieceFieldNumber][1]
             colorShadowPieces = nonzeroElements(possibleMoves & color)
             colorShadows = np.uint64(0)
@@ -298,7 +298,7 @@ class Board:
                 newMoves = nonzeroElements(newMoves)
                 if allPinned & n:
                         king = nonzeroElements(color & self.pieceList[5])
-                        kingNumber = toNumber(king)
+                        kingNumber = np.max(toNumber(king))
                         for i in newMoves:
                             if (between[pieceFieldNumber][kingNumber] & i) or (between[kingNumber][toNumber(i)] & n):
                                 self.moves.append((n,i,4,False,np.uint64(0),np.uint64(0)))
