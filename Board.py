@@ -462,7 +462,7 @@ class Board:
                 self.white |= toField
 
         if castle:
-            self.pieceList[1] = np.append(nonzeroElements(self.pieceList[piece] & ~castleRookTo),castleRookFrom)
+            self.pieceList[1] = np.append(nonzeroElements(self.pieceList[1] & ~castleRookTo),castleRookFrom)
             if self.isWhite:
                 self.white = (self.white | castleRookFrom) & ~castleRookTo
             else:
