@@ -2,8 +2,8 @@ from moves import *
 import numpy as np
 from utils import *
 
-whitePromotions = np.uint64(18374686479671623680)
-blackPromotions = np.uint64(255)
+blackPromotions = np.uint64(18374686479671623680)
+whitePromotions = np.uint64(255)
 castleBoards = np.array([9223372036854775808,72057594037927936,128,1],dtype=np.uint64)
 possibleCastles = np.array([1,2,4,8],dtype=np.uint8)
 
@@ -83,6 +83,7 @@ class Board:
         self.pieceBitboards[5] = np.bitwise_or.reduce(self.pieceList[5])
 
     def getMoves(self):
+        self.moves = []
         color = self.white
         enemy = self.black
         if not self.isWhite:
@@ -360,6 +361,7 @@ class Board:
                 self.pieceList[0] = np.append(self.pieceList[0], toField)
             else:
                 if toField & oldEnPassant:
+                    catch = 0
                     self.pieceList[0] = nonzeroElements(self.pieceList[0]& ~(oldEnPassant))  
                     self.all = self.all & ~oldEnPassant
                     if self.isWhite:
@@ -374,18 +376,22 @@ class Board:
                 if np.any(possibleCastle):
                     self.castle &= ~possibleCastles[np.nonzero(possibleCastle)]
             elif castle:
-                if castle & 1:
+                if castle & np.uint(1):
                     castleRookTo = np.uint64(1 << 61)
                     castleRookFrom = np.uint64(1 << 63)
-                elif castle & 4:
+                    self.castle &= ~np.uint(3)
+                elif castle & np.uint(4):
                     castleRookTo = np.uint64(1 << 5)
                     castleRookFrom = np.uint64(1 << 7)
-                elif castle & 2:
+                    self.castle &= ~np.uint(12)
+                elif castle & np.uint(2):
                     castleRookTo = np.uint64(1 << 59)
                     castleRookFrom = np.uint64(1 << 56)
+                    self.castle &= ~np.uint(3)
                 else:
                     castleRookTo = np.uint64(1 << 3)
                     castleRookFrom = np.uint64(1 << 1)
+                    self.castle &= ~np.uint(12)
                 self.pieceList[1] = nonzeroElements(np.append(self.pieceList[1], castleRookTo) & ~castleRookFrom)
                 if self.isWhite:
                     self.white = (self.white & ~castleRookFrom) | castleRookTo
@@ -434,10 +440,21 @@ class Board:
 
         self.pieceList[piece] = np.append(nonzeroElements(self.pieceList[piece] & ~toField),fromField)
 
+        if self.isWhite:
+            EnPassant = self.en_passant<<np.uint64(8)
+        else:
+            EnPassant = self.en_passant>>np.uint64(8)
+
         if promotion:
             self.pieceList[promotion] = nonzeroElements(self.pieceList[promotion] & ~toField)
 
-        if not (catch == -1):
+        if catch == 0 and EnPassant & toField:
+            self.pieceList[catch] = np.append(self.pieceList[catch], self.en_passant)
+            if self.isWhite:
+                self.black |= toField
+            else:
+                self.white |= toField
+        elif (catch >= 0):
             self.pieceList[catch] = np.append(self.pieceList[catch], toField)
             if self.isWhite:
                 self.black |= toField
@@ -445,14 +462,19 @@ class Board:
                 self.white |= toField
 
         if castle:
-            self.pieceList[1] = np.append(nonzeroElements(self.pieceList[1] & ~castleRookTo),castleRookFrom)
+            self.pieceList[1] = np.append(nonzeroElements(self.pieceList[piece] & ~castleRookTo),castleRookFrom)
+            if self.isWhite:
+                self.white = (self.white | castleRookFrom) & ~castleRookTo
+            else:
+                self.black = (self.black | castleRookFrom) & ~castleRookTo
 
         self.updateBitboard()
         if self.isWhite:
             self.white = (self.white | fromField) & ~toField
         else:
             self.black = (self.black | fromField) & ~toField
-
+        self.all = self.white | self.black
+        self.moves = []
         return self
 
     def undoAllMoves(self):
