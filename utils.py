@@ -142,7 +142,7 @@ def pinned(board, color: np.uint64, enemy: np.uint64):
     pinned = np.uint64(0)
     for n in nonzeroElements(attackers):
         blockers = between[kNumber][toNumber(n)] & board.all
-        if blockers.bit_count() == 1:
+        if popcount_zero(blockers) == 1:
             pinned |= blockers & color
     return pinned
 
@@ -300,3 +300,11 @@ def movesToJSON(moves):
         object['value'] = value
         list.append(object)
     return {'moves': list}
+
+def popcount_zero(x):
+    c = np.uint(0)
+    while x:
+        x &= x - np.uint(1)
+        c += np.uint(1)
+
+    return c
