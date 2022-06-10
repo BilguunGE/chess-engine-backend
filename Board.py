@@ -445,7 +445,7 @@ class Board:
                 self.white |= toField
 
         if castle:
-            self.pieceList[1] = np.append(nonzeroElements(self.pieceList[piece] & ~castleRookTo),castleRookFrom)
+            self.pieceList[1] = np.append(nonzeroElements(self.pieceList[1] & ~castleRookTo),castleRookFrom)
 
         self.updateBitboard()
         if self.isWhite:
