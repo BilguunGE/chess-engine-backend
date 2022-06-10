@@ -302,9 +302,8 @@ def movesToJSON(moves):
     return {'moves': list}
 
 def popcount_zero(x):
-    c = np.uint(0)
+    c = 0
     while x:
         x &= x - np.uint(1)
-        c += np.uint(1)
-
+        c += 1
     return c
