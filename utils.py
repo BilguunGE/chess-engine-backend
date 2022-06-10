@@ -39,7 +39,7 @@ def bits(n):
 
 def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
     if not np.any(field):
-        print('inside')
+        print(toFen(board))
         return np.uint64(0)
     field = np.max(toNumber(field))
     if (enemy & board.pieceBitboards[2] & allMoves[5][field][2]):
