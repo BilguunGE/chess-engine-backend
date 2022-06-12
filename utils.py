@@ -189,7 +189,7 @@ def iterativeDeepening(timeLimit, board, alpha, beta, maximizingPlayer, list):
     while True:
         if now() >= endTime:
             break
-        result = alphabeta(board, depth, alpha, beta, maximizingPlayer, list)
+        result = alphabeta(board, depth, alpha, beta, maximizingPlayer, True, list)
         depth += 1
     return result
 
@@ -210,7 +210,7 @@ def minimax(board, depth, maximizingPlayer):
         return value
 
 
-def alphabeta(board, depth, alpha, beta, maximizingPlayer, list):
+def alphabeta(board, depth, alpha, beta, maximizingPlayer, isEntry, list):
     #objFound = board.getEntry()
     #if objFound is not None:
     #    if objFound.get('lowerbound', float('-inf'))>= beta:
@@ -221,33 +221,33 @@ def alphabeta(board, depth, alpha, beta, maximizingPlayer, list):
     #    beta = min(beta, objFound.get('upperbound', float('inf')))
     if depth == 0 or isGameDone(board):
         value = evalBoard(board)
-        if len(board.moveHistoryAB) > 0:
-            move = board.moveHistoryAB.pop()
-            list.append((move, value))
-            board.undoMove(move)
         return value
     if maximizingPlayer:
         value = float('-inf')
-        for child in board.getMoves():
-            value = max(value, alphabeta(board.doMove(child), depth-1, alpha, beta, False,list))
-            if len(board.moveHistoryAB) > 0:
-                move = board.moveHistoryAB.pop()
+        for move in board.getMoves():
+            child = board.doMove(move)
+            value = max(value, alphabeta(child, depth-1, alpha, beta, False, False, list))
+            child.undoLastMove()
+            if isEntry:
                 list.append((move, value))
-                board.undoMove(move)
             if value >= beta:
                 break
             alpha = max(alpha, value)
+        return value
+
     else:
         value = float('inf')
-        for child in board.getMoves():
-            value = min(value, alphabeta(board.doMove(child), depth-1, alpha, beta, True, list ))
-            if len(board.moveHistoryAB) > 0:
-                move = board.moveHistoryAB.pop()
+        for move in board.getMoves():
+            child = board.doMove(move)
+            value = min(value, alphabeta(child, depth-1, alpha, beta, True, False, list))
+            child.undoLastMove()
+            if isEntry:
                 list.append((move, value))
-                board.undoMove(move)
             if value <= alpha:
                 break
             beta = min(beta, value)
+        return value
+
 
     #if value <= alpha:
     #    id = board.getHash()
@@ -258,7 +258,6 @@ def alphabeta(board, depth, alpha, beta, maximizingPlayer, list):
     #if value >= beta:
     #    id = board.getHash()
     #    board.ttable.update({id: {'lowerbound': value}})
-    return value
 
 
 
@@ -278,8 +277,8 @@ def evalBoard(board):
         board.pieceList[3] & color).size - nonzeroElements(board.pieceList[3] & enemy).size
     queenDelta = nonzeroElements(
         board.pieceList[4] & color).size - nonzeroElements(board.pieceList[4] & enemy).size
-    check = inCheck(board, enemy, color, not board.isWhite) - \
-        inCheck(board, color, enemy, board.isWhite)
+    check = inCheck(board, enemy, color, not board.isWhite, board.all) - \
+        inCheck(board, color, enemy, board.isWhite, board.all)
     # TODO 1: include  checkmate (very high value), king of the hill (very high value), remis (negative value)
     # TODO 2: implement multiple evaluation functions => z.B. Ruhesuche bei vielen Figuren
     return 10 * check + 9 * queenDelta + 5 * rookDelta + 3 * knightDelta + 3 * bishopDelta + 1 * pawnDelta
@@ -298,6 +297,23 @@ def movesToJSON(moves):
         object['castle'] = bool(move[4])
         object['promotion'] = bool(move[5])
         object['value'] = value
+        list.append(object)
+    return {'moves': list}
+
+def movesToJSON2(moves):
+    list = []
+    for move in moves:
+        value = move[1]
+        move = move[0]
+        object = {}
+        object['fromField'] = fieldToString(move[0])
+        object['toField'] = fieldToString(move[1])
+        object['figure'] = getFigure(move[2])
+        object['enPassant'] = bool(move[3])
+        object['castle'] = bool(move[4])
+        object['promotion'] = bool(move[5])
+        object['value'] = value
+
         list.append(object)
     return {'moves': list}
 
