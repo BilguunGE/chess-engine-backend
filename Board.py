@@ -3,6 +3,12 @@ import numpy as np
 from utils import *
 import random
 
+## alle möglichen Züge unterteilt in [Figur][Feld,Züge] wobei die Züge in np.array gespeichert werden
+allMoves = allMovesGen()
+## die Schatten aller Feld1 X Feld2 Möglichkeiten unterteilt in [Figur][Feld1][Schatten nach Feld2] wobei die Schatten in uint Repräsentation vorliegen
+allShadows = allShadowsGen()
+## alle Felder zwischen Feld1 und Feld unterteilt in [Feld1][Felder zwischen Feld1 unf Feld2] wobei die Felder in uint Repräsentation vorliegen
+between = betweenGen()
 
 blackPromotions = np.uint64(18374686479671623680)
 whitePromotions = np.uint64(255)
@@ -422,7 +428,9 @@ class Board:
         self.isWhite = not self.isWhite
         if not persistant:
             self.moveHistoryAB.append((move,undoHalfmove,undoCastle,undoEnPassant,catch,castleRookFrom,castleRookTo))
-        
+        if self.white & self.black:
+            txt = toFen(self)
+            raise NameError("white=black " + txt)
         self.updateBitboard()
         self.moves = []
         return self
@@ -454,32 +462,34 @@ class Board:
         if promotion:
             self.pieceList[promotion] = nonzeroElements(self.pieceList[promotion] & ~toField)
 
-        if catch == 0 and EnPassant & toField:
+        if catch == 0 and (EnPassant & toField):
             self.pieceList[catch] = np.append(self.pieceList[catch], self.en_passant)
             if self.isWhite:
-                self.black |= toField
+                self.black = self.black | toField
             else:
-                self.white |= toField
+                self.white = self.white | toField
         elif (catch >= 0):
             self.pieceList[catch] = np.append(self.pieceList[catch], toField)
             if self.isWhite:
-                self.black |= toField
+                self.black = self.black | toField
             else:
-                self.white |= toField
+                self.white = self.white | toField
 
-        if castle:
+        elif castle:
             self.pieceList[1] = np.append(nonzeroElements(self.pieceList[1] & ~castleRookTo),castleRookFrom)
             if self.isWhite:
                 self.white = (self.white | castleRookFrom) & ~castleRookTo
             else:
                 self.black = (self.black | castleRookFrom) & ~castleRookTo
-
         self.updateBitboard()
         if self.isWhite:
             self.white = (self.white | fromField) & ~toField
         else:
             self.black = (self.black | fromField) & ~toField
         self.all = self.white | self.black
+        if self.white & self.black:
+            txt = toFen(self)
+            raise NameError("white=black " + txt + str(move))
         self.moves = []
         return self
 

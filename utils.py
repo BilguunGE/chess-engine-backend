@@ -39,7 +39,6 @@ def bits(n):
 
 def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
     if not np.any(field):
-        print(toFen(board))
         return np.uint64(0)
     field = np.max(toNumber(field))
     if (enemy & board.pieceBitboards[2] & allMoves[5][field][2]):
@@ -196,17 +195,22 @@ def iterativeDeepening(timeLimit, board, alpha, beta, maximizingPlayer, list):
 def minimax(board, depth, maximizingPlayer):
     if depth == 0 or isGameDone(board):
         value = evalBoard(board)
-        board.undoAllMoves()
         return value
     if maximizingPlayer:
         value = float('-inf')
-        for child in board.getMoves():
+        moves = board.getMoves()
+        for child in moves:
             value = max(value, minimax(board.doMove(child), depth-1, False))
+            move = board.moveHistoryAB.pop()
+            board.undoMove(move)
         return value
     else:
         value = float('inf')
-        for child in board.getMoves():
+        moves = board.getMoves()
+        for child in moves:
             value = min(value, minimax(board.doMove(child), depth-1, True))
+            move = board.moveHistoryAB.pop()
+            board.undoMove(move)
         return value
 
 
@@ -278,8 +282,11 @@ def evalBoard(board):
         board.pieceList[3] & color).size - nonzeroElements(board.pieceList[3] & enemy).size
     queenDelta = nonzeroElements(
         board.pieceList[4] & color).size - nonzeroElements(board.pieceList[4] & enemy).size
-    check = inCheck(board, enemy, color, not board.isWhite) - \
-        inCheck(board, color, enemy, board.isWhite)
+    check = 0
+    #if inCheck(board, enemy, color, not board.isWhite,board.all):
+    #    check = 1
+    ##check = inCheck(board, enemy, color, not board.isWhite,board.all) - \
+    ##    inCheck(board, color, enemy, board.isWhite,board.all)
     # TODO 1: include  checkmate (very high value), king of the hill (very high value), remis (negative value)
     # TODO 2: implement multiple evaluation functions => z.B. Ruhesuche bei vielen Figuren
     return 10 * check + 9 * queenDelta + 5 * rookDelta + 3 * knightDelta + 3 * bishopDelta + 1 * pawnDelta
