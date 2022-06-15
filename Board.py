@@ -487,6 +487,11 @@ class Board:
         while len(self.moveHistoryAB) > 0:
             move = self.moveHistoryAB.pop()
             self.undoMove(move)
+
+    def undoLastMove(self):
+        if len(self.moveHistoryAB) > 0:
+            move = self.moveHistoryAB.pop()
+            self.undoMove(move)
     
     def deepcopy(self):
         return Board(toFen(self))
