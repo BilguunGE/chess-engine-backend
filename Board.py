@@ -8,7 +8,7 @@ blackPromotions = np.uint64(18374686479671623680)
 whitePromotions = np.uint64(255)
 castleBoards = np.array([9223372036854775808,72057594037927936,128,1],dtype=np.uint64)
 possibleCastles = np.array([1,2,4,8],dtype=np.uint8)
-zobTable = [[[random.randint(1,2**64 - 1) for i in range(12)]for j in range(8)]for k in range(8)]
+zobTable = [[random.randint(1,2**64 - 1) for i in range(12)]for j in range(64)]
 
 
 max = 'w'
@@ -490,53 +490,21 @@ class Board:
     
     def deepcopy(self):
         return Board(toFen(self))
-    
-    def indexing(self, piece):
-    # mapping each piece to a particular number
-        if (piece=='P'):
-            return 0
-        if (piece=='N'):
-            return 1
-        if (piece=='B'):
-            return 2
-        if (piece=='R'):
-            return 3
-        if (piece=='Q'):
-            return 4
-        if (piece=='K'):
-            return 5
-        if (piece=='p'):
-            return 6
-        if (piece=='n'):
-            return 7
-        if (piece=='b'):
-            return 8
-        if (piece=='r'):
-            return 9
-        if (piece=='q'):
-            return 10
-        if (piece=='k'):
-            return 11
-        else:
-            return -1
 
     def getHash(self):
-        board = [
-            ['-', '-', '-', 'K', '-', '-', '-', '-'],
-            ['-', 'R', '-', '-', '-', '-', 'Q', '-'],
-            ['-', '-', '-', '-', '-', '-', '-', '-'],
-            ['-', 'P', '-', '-', '-', '-', 'p', '-'],
-            ['-', '-', '-', '-', '-', 'p', '-', '-'],
-            ['-', '-', '-', '-', '-', '-', '-', '-'],
-            ['p', '-', '-', '-', 'b', '-', '-', 'q'],
-            ['-', '-', '-', '-', 'n', '-', '-', 'k']
-        ]
         hash = 0
-        for i in range(8):
-            for j in range(8):
-                if board[i][j] != '-':
-                    piece = self.indexing(board[i][j])
-                    hash ^= zobTable[i][j][piece]
+        for x in range(6):
+            whitePieces = self.pieceList[x] & self.white
+            for y in nonzeroElements(whitePieces):
+                hash ^= zobTable[toNumber(y)][x]
+            blackPieces = self.pieceList[x] & self.black
+            for y in nonzeroElements(blackPieces):
+                hash ^= zobTable[toNumber(y)+6][x]
+        ##for i in range(8):
+        ##    for j in range(8):
+        ##        if board[i][j] != '-':
+        ##            piece = self.indexing(board[i][j])
+        ##            hash ^= zobTable[i][j][piece]
         return hash
 
     def getEntry(self):
