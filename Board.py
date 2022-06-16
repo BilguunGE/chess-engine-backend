@@ -25,6 +25,7 @@ class Board:
     fullmove = 1
     isWhite = True
     moveHistoryAB = []
+    hash = 0
     moves = []
     pieceBitboards = np.zeros(shape=6,dtype=np.uint64)
     ttable = {}
@@ -78,6 +79,7 @@ class Board:
         self.halfmove = int(fen[4])
         self.fullmove = int(fen[5])
         self.moves = []
+        self.hash = self.getHash()
         self.updateBitboard()
     
     def updateBitboard(self):
@@ -327,23 +329,32 @@ class Board:
         catch = -1
         castleRookTo = 0
         castleRookFrom = 0
+        zobTablePieceNumber = 0
+        if not self.isWhite:
+            zobTablePieceNumber = 6
         if self.pieceBitboards[0] & toField:
             catch = 0
             self.pieceList[0] = nonzeroElements(self.pieceList[0] & ~toField)
+            self.hash ^= zobTable[toNumber(toField)][(zobTablePieceNumber+6)%12]
         elif self.pieceBitboards[1] & toField:
             catch = 1
             self.pieceList[1] = nonzeroElements(self.pieceList[1] & ~toField)
+            self.hash ^= zobTable[toNumber(toField)][(zobTablePieceNumber+7)%12]
         elif self.pieceBitboards[2] & toField:
             catch = 2
             self.pieceList[2] = nonzeroElements(self.pieceList[2] & ~toField)
+            self.hash ^= zobTable[toNumber(toField)][(zobTablePieceNumber+8)%12]
         elif self.pieceBitboards[3] & toField:
             catch = 3
             self.pieceList[3] = nonzeroElements(self.pieceList[3] & ~toField)
+            self.hash ^= zobTable[toNumber(toField)][(zobTablePieceNumber+9)%12]
         elif self.pieceBitboards[4] & toField:
             catch = 4
             self.pieceList[4] = nonzeroElements(self.pieceList[4] & ~toField)
+            self.hash ^= zobTable[toNumber(toField)][(zobTablePieceNumber+10)%12]
 
         self.pieceList[piece] = nonzeroElements(self.pieceList[piece] & ~fromField)
+        self.hash ^= zobTable[toNumber(fromField)][zobTablePieceNumber+piece]
 
         self.all = (self.all | toField) & ~fromField
         self.fullmove += 1
@@ -358,25 +369,31 @@ class Board:
             self.halfmove = 0
             if promotion:
                 self.pieceList[promotion] = np.append(self.pieceList[promotion], toField)
+                self.hash ^= zobTable[toNumber(toField)][zobTablePieceNumber+promotion]
             elif en_passant:
                 if self.isWhite:
                     self.en_passant = fromField>>np.uint64(8)
                 else:
                     self.en_passant = fromField<<np.uint64(8)
                 self.pieceList[0] = nonzeroElements(self.pieceList[0] & ~toField)
+                self.hash ^= zobTable[toNumber(toField)][(zobTablePieceNumber+6)%12]
                 self.pieceList[0] = np.append(self.pieceList[0], toField)
+                self.hash ^= zobTable[toNumber(toField)][zobTablePieceNumber]
             else:
                 if toField & oldEnPassant:
                     catch = 0
                     self.pieceList[0] = nonzeroElements(self.pieceList[0]& ~(oldEnPassant))  
+                    self.hash ^= zobTable[toNumber(oldEnPassant)][zobTablePieceNumber]
                     self.all = self.all & ~oldEnPassant
                     if self.isWhite:
                         self.black = self.black & ~oldEnPassant
                     else:
                         self.white = self.white & ~oldEnPassant
                 self.pieceList[0] = np.append(self.pieceList[0], toField)
+                self.hash ^= zobTable[toNumber(toField)][zobTablePieceNumber]
         else:
             self.pieceList[piece] = np.append(self.pieceList[piece], toField)
+            self.hash ^= zobTable[toNumber(toField)][zobTablePieceNumber+piece]
             if piece == 1:
                 possibleCastle = fromField & castleBoards
                 if np.any(possibleCastle):
@@ -399,6 +416,8 @@ class Board:
                     castleRookFrom = np.uint64(1 << 1)
                     self.castle &= ~np.uint(12)
                 self.pieceList[1] = nonzeroElements(np.append(self.pieceList[1], castleRookTo) & ~castleRookFrom)
+                self.hash ^= zobTable[toNumber(castleRookTo)][zobTablePieceNumber+1]
+                self.hash ^= zobTable[toNumber(castleRookFrom)][zobTablePieceNumber+1]
                 if self.isWhite:
                     self.white = (self.white & ~castleRookFrom) | castleRookTo
                 else:
@@ -453,26 +472,38 @@ class Board:
 
         if promotion:
             self.pieceList[promotion] = nonzeroElements(self.pieceList[promotion] & ~toField)
+            if self.isWhite:
+                self.hash ^= zobTable[toNumber(toField)][promotion]
+            else:
+                self.hash ^= zobTable[toNumber(toField)][promotion+6]
 
         if catch == 0 and EnPassant & toField:
             self.pieceList[catch] = np.append(self.pieceList[catch], self.en_passant)
             if self.isWhite:
-                self.black |= toField
+                self.black |= EnPassant
+                self.hash ^= zobTable[toNumber(EnPassant)][catch+6]
             else:
-                self.white |= toField
+                self.white |= EnPassant
+                self.hash ^= zobTable[toNumber(EnPassant)][catch]
         elif (catch >= 0):
             self.pieceList[catch] = np.append(self.pieceList[catch], toField)
             if self.isWhite:
                 self.black |= toField
+                self.hash ^= zobTable[toNumber(toField)][catch+6]
             else:
                 self.white |= toField
+                self.hash ^= zobTable[toNumber(toField)][catch]
 
         if castle:
             self.pieceList[1] = np.append(nonzeroElements(self.pieceList[1] & ~castleRookTo),castleRookFrom)
             if self.isWhite:
                 self.white = (self.white | castleRookFrom) & ~castleRookTo
+                self.hash ^= zobTable[toNumber(castleRookFrom)][1]
+                self.hash ^= zobTable[toNumber(castleRookTo)][1]
             else:
                 self.black = (self.black | castleRookFrom) & ~castleRookTo
+                self.hash ^= zobTable[toNumber(castleRookFrom)][7]
+                self.hash ^= zobTable[toNumber(castleRookTo)][7]
 
         self.updateBitboard()
         if self.isWhite:
@@ -480,6 +511,14 @@ class Board:
         else:
             self.black = (self.black | fromField) & ~toField
         self.all = self.white | self.black
+
+        if self.isWhite and not promotion:
+            self.hash ^= zobTable[toNumber(fromField)][piece]
+            self.hash ^= zobTable[toNumber(toField)][piece]
+        elif not promotion:
+            self.hash ^= zobTable[toNumber(fromField)][piece+6]
+            self.hash ^= zobTable[toNumber(toField)][piece+6]
+
         self.moves = []
         return self
 
@@ -504,7 +543,7 @@ class Board:
                 hash ^= zobTable[toNumber(y)][x]
             blackPieces = self.pieceList[x] & self.black
             for y in nonzeroElements(blackPieces):
-                hash ^= zobTable[toNumber(y)+6][x]
+                hash ^= zobTable[toNumber(y)][x+6]
         ##for i in range(8):
         ##    for j in range(8):
         ##        if board[i][j] != '-':
