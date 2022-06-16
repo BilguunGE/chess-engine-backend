@@ -61,7 +61,10 @@ def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
 
 def inCheck(board, color: np.uint64, enemy: np.uint64, white: bool, all):
     kingN = nonzeroElements(board.pieceList[5] & color)
-    return attacked(board, enemy, white, kingN, all)
+    result = 0
+    if attacked(board, enemy, white, kingN, all) > 0:
+        result = 1
+    return result
 
 def toFen(board):
     boardTxt = ['-']*64
@@ -165,9 +168,10 @@ def isBeat(isBeatable):
     return result
 
 def isGameDone(board):
-    return False
+    result = isMate(board) or isRemis(board) or isKingOfTheHill(board)
+    return result
 
-def checkmate(board):
+def isMate(board):
     if board.isWhite:
         color = board.white
         enemy = board.black
@@ -176,8 +180,17 @@ def checkmate(board):
         color = board.black
     return (board.moves == [] and inCheck(board, color, enemy, board.isWhite, board.all))
 
-def remis(board):
-    return (board.halfmove == 50 or board.moves == [])
+def isRemis(board):
+    # TODO: Other Remis..
+    return (board.halfmove == 100 or board.moves == [])
+
+def isKingOfTheHill(board):
+    result = False
+    for n in board.pieceList[5]:
+        if n == 2**27 or n == 2**28 or n == 2**35 or n == 2**36: # TODO How to do this better?
+            result = True        
+    return result
+
 
 def now():
     return time.time()*1000
@@ -209,59 +222,52 @@ def minimax(board, depth, maximizingPlayer):
             value = min(value, minimax(board.doMove(child), depth-1, True))
         return value
 
+def alphaBetaMove(board, depth, alpha, beta, isMax):
+    result = []
+    alphabeta(board, depth, alpha, beta, isMax, True, result)
+    # TODO return only one next best move
+    return result
 
-def alphabeta(board, depth, alpha, beta, maximizingPlayer, isEntry, list):
-    #objFound = board.getEntry()
-    #if objFound is not None:
-    #    if objFound.get('lowerbound', float('-inf'))>= beta:
-    #         return objFound['lowerbound']
-    #    if objFound.get('upperbound', float('inf')) <= alpha:
-    #         return objFound['upperbound']
-    #    alpha = max(alpha, objFound.get('lowerbound', float('-inf')))
-    #    beta = min(beta, objFound.get('upperbound', float('inf')))
-    if depth == 0 or isGameDone(board):
-        value = evalBoard(board)
+def alphabeta(board, depth, alpha, beta, isMax, isNext, list):
+    # TODO doesn't work properly yet. Weird with depth 5 and above. Better way to save next moves and their values? 
+    moves = board.getMoves()
+    if (depth == 0) or isGameDone(board):
+        value = evalBoard(board) * (1.1**depth)
+        board.undoLastMove()
         return value
-    if maximizingPlayer:
-        value = float('-inf')
-        for move in board.getMoves():
-            child = board.doMove(move)
-            value = max(value, alphabeta(child, depth-1, alpha, beta, False, False, list))
-            child.undoLastMove()
-            if isEntry:
+    if isMax:
+        value = alpha
+        for move in moves:
+            board.doMove(move)
+            value = max(value, alphabeta(board, depth - 1, value, beta, False, False, list))
+            if isNext:
                 list.append((move, value))
             if value >= beta:
                 break
-            alpha = max(alpha, value)
+        board.undoLastMove()
         return value
-
     else:
-        value = float('inf')
-        for move in board.getMoves():
-            child = board.doMove(move)
-            value = min(value, alphabeta(child, depth-1, alpha, beta, True, False, list))
-            child.undoLastMove()
-            if isEntry:
+        value = beta
+        for move in moves:
+            board.doMove(move)
+            value = min(value, alphabeta(board, depth - 1, alpha, value, True, False, list))
+            if isNext:
                 list.append((move, value))
             if value <= alpha:
                 break
-            beta = min(beta, value)
+        board.undoLastMove()
         return value
 
-
-    #if value <= alpha:
-    #    id = board.getHash()
-    #    board.ttable.update({id: {'upperbound': value}})
-    #if value > alpha and value < beta:
-    #    id = board.getHash()
-    #    board.ttable.update({id: {'lowerbound': value, 'upperbound': value}})
-    #if value >= beta:
-    #    id = board.getHash()
-    #    board.ttable.update({id: {'lowerbound': value}})
-
-
-
 def evalBoard(board):
+    """ Evaluates a board state by applying a heuritic.
+
+    Args:
+        `board`: Board instance that will be evaluated
+
+    Returns:
+        A numeric value for the current board state
+    """
+    
     color = board.white
     enemy = board.black
     if not board.isWhite:
@@ -279,10 +285,15 @@ def evalBoard(board):
         board.pieceList[4] & color).size - nonzeroElements(board.pieceList[4] & enemy).size
     check = inCheck(board, enemy, color, not board.isWhite, board.all) - \
         inCheck(board, color, enemy, board.isWhite, board.all)
-    # TODO 1: include  checkmate (very high value), king of the hill (very high value), remis (negative value)
-    # TODO 2: implement multiple evaluation functions => z.B. Ruhesuche bei vielen Figuren
-    return 10 * check + 9 * queenDelta + 5 * rookDelta + 3 * knightDelta + 3 * bishopDelta + 1 * pawnDelta
-
+    # TODO implement multiple evaluation functions => z.B. Ruhesuche bei vielen Figuren
+    result = 10 * check + 9 * queenDelta + 5 * rookDelta + 3 * knightDelta + 3 * bishopDelta + 1 * pawnDelta
+    
+    if isRemis(board):
+        result = -1 
+    if isKingOfTheHill(board) or isMate(board): #TODO Farbbasiert
+        result = 10000
+    # print("Heuristic value of "+toFen(board)+": ", result, "KingOfTheHill: ", isKingOfTheHill(board))
+    return result
 
 def movesToJSON(moves):
     list = []

@@ -1,7 +1,7 @@
 from Board import *
-from utils import toFen, toNumber, movesToJSON2, iterativeDeepening
+from utils import toFen, toNumber, movesToJSON2, alphaBetaMove
 
-board  = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+board  = Board('8/8/5k2/8/8/2K5/8/8 w - - 0 1')
 
 def initBoard(fenString):
     global board
@@ -9,11 +9,7 @@ def initBoard(fenString):
     return getMoves()
 
 def getMoves():
-    result = []
-    #iterativeDeepening(500, board, -10000, 10000, False, result)
-    alphabeta(board, 3, -10000, 10000, True, True, result)
-    print(toFen(board))
-    return movesToJSON2(result)
+    return movesToJSON2(alphaBetaMove(board, 3, -10000, 10000, True))
 
 def testMoves():
     b = board
