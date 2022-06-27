@@ -61,7 +61,10 @@ def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
 
 def inCheck(board, color: np.uint64, enemy: np.uint64, white: bool, all):
     kingN = nonzeroElements(board.pieceList[5] & color)
-    return attacked(board, enemy, white, kingN, all)
+    result = 0
+    if attacked(board, enemy, white, kingN, all) > 0:
+        result = 1
+    return result
 
 def toFen(board):
     boardTxt = ['-']*64
@@ -165,9 +168,14 @@ def isBeat(isBeatable):
     return result
 
 def isGameDone(board):
-    return False
+    if board.isWhite:
+        color = board.white
+    else:
+        color = board.black
+    result = isMate(board) or isRemis(board) or isKingOfTheHill(board, color)
+    return result
 
-def checkmate(board):
+def isMate(board):
     if board.isWhite:
         color = board.white
         enemy = board.black
@@ -176,8 +184,32 @@ def checkmate(board):
         color = board.black
     return (board.moves == [] and inCheck(board, color, enemy, board.isWhite, board.all))
 
-def remis(board):
-    return (board.halfmove == 50 or board.moves == [])
+def isRemis(board):
+    if board.isWhite:
+        color = board.white
+        enemy = board.black
+    else:
+        enemy = board.white
+        color = board.black
+    # TODO: Other Remis..
+    isStaleMate = board.moves == [] and not inCheck(board, color, enemy, board.isWhite, board.all)
+    return (board.halfmove == 100 or isStaleMate)
+
+def isKingOfTheHill(board, color):
+    """To check if a given color is King of the hill 
+
+    Args:
+        `board`: Board to be checked
+        `color`: color which could be King of the hill
+
+    Returns:
+        1 if color is King of the hill, 0 otherwise
+    """
+    for n in board.pieceList[5] & color:
+        if n == 2**27 or n == 2**28 or n == 2**35 or n == 2**36:
+            return True        
+    return False
+
 
 def now():
     return time.time()*1000
@@ -209,64 +241,61 @@ def minimax(board, depth, maximizingPlayer):
             value = min(value, minimax(board.doMove(child), depth-1, True))
         return value
 
+def alphaBetaMove(board, depth, alpha, beta):
+    result = []
+    if depth <= 0:
+        return
+    moves = board.getMoves()
+    for move in moves:
+        board.doMove(move)
+        value = alphabeta(board, depth-1, alpha, beta, False)
+        result.append({
+                "move": moveToObject(move),
+                "value": value
+            })
+        board.undoLastMove()
+        if value >= beta:
+            break
+    return result
 
-def alphabeta(board, depth, alpha, beta, maximizingPlayer, isEntry, list):
-    #objFound = board.getEntry()
-    #if objFound is not None:
-    #    if objFound.get('lowerbound', float('-inf'))>= beta:
-    #         return objFound['lowerbound']
-    #    if objFound.get('upperbound', float('inf')) <= alpha:
-    #         return objFound['upperbound']
-    #    alpha = max(alpha, objFound.get('lowerbound', float('-inf')))
-    #    beta = min(beta, objFound.get('upperbound', float('inf')))
-    if depth == 0 or isGameDone(board):
-        value = evalBoard(board)
-        return value
-    if maximizingPlayer:
-        value = float('-inf')
-        for move in board.getMoves():
-            child = board.doMove(move)
-            value = max(value, alphabeta(child, depth-1, alpha, beta, False, False, list))
-            child.undoLastMove()
-            if isEntry:
-                list.append((move, value))
+def alphabeta(board, depth, alpha, beta, isMax):
+    # TODO doesn't work properly yet. Weird with depth 5 and above. Better way to save next moves and their values? 
+    moves = board.getMoves()
+    if (depth == 0) or isGameDone(board):
+        return evalBoard(board) * (1.1**depth)
+    if isMax:
+        value = alpha
+        for move in moves:
+            board.doMove(move)
+            value = max(value, alphabeta(board, depth - 1, value, beta, False))
+            board.undoLastMove()
             if value >= beta:
                 break
-            alpha = max(alpha, value)
         return value
-
     else:
-        value = float('inf')
-        for move in board.getMoves():
-            child = board.doMove(move)
-            value = min(value, alphabeta(child, depth-1, alpha, beta, True, False, list))
-            child.undoLastMove()
-            if isEntry:
-                list.append((move, value))
+        value = beta
+        for move in moves:
+            board.doMove(move)
+            value = min(value, alphabeta(board, depth - 1, alpha, value, True))
+            board.undoLastMove()
             if value <= alpha:
                 break
-            beta = min(beta, value)
         return value
 
-
-    #if value <= alpha:
-    #    id = board.getHash()
-    #    board.ttable.update({id: {'upperbound': value}})
-    #if value > alpha and value < beta:
-    #    id = board.getHash()
-    #    board.ttable.update({id: {'lowerbound': value, 'upperbound': value}})
-    #if value >= beta:
-    #    id = board.getHash()
-    #    board.ttable.update({id: {'lowerbound': value}})
-
-
-
 def evalBoard(board):
-    color = board.white
-    enemy = board.black
-    if not board.isWhite:
-        color = board.black
-        enemy = board.white
+    """ Evaluates a board state by applying a heuritic.
+
+    Args:
+        `board`: Board instance that will be evaluated
+
+    Returns:
+        A numeric value for the current board state
+    """
+    color = board.black
+    enemy = board.white
+    if board.isWhite:
+        color = board.white
+        enemy = board.black
     pawnDelta = nonzeroElements(
         board.pieceList[0] & color).size - nonzeroElements(board.pieceList[0] & enemy).size
     rookDelta = nonzeroElements(
@@ -279,32 +308,41 @@ def evalBoard(board):
         board.pieceList[4] & color).size - nonzeroElements(board.pieceList[4] & enemy).size
     check = inCheck(board, enemy, color, not board.isWhite, board.all) - \
         inCheck(board, color, enemy, board.isWhite, board.all)
-    # TODO 1: include  checkmate (very high value), king of the hill (very high value), remis (negative value)
-    # TODO 2: implement multiple evaluation functions => z.B. Ruhesuche bei vielen Figuren
-    return 10 * check + 9 * queenDelta + 5 * rookDelta + 3 * knightDelta + 3 * bishopDelta + 1 * pawnDelta
+    result = 10 * check + 9 * queenDelta + 5 * rookDelta + 3 * knightDelta + 3 * bishopDelta + 1 * pawnDelta
+    
+    kingOfTheHill = isKingOfTheHill(board, color) - isKingOfTheHill(board, enemy)
+    
+    if kingOfTheHill != 0: 
+        result = kingOfTheHill
+    
+    if isRemis(board):
+        result = -1
+    # if isKingOfTheHill(board) or isMate(board):
+    #     result = factor * 10000
+    return result
 
+def moveToObject(move):
+    object = {}
+    object['fromField'] = fieldToString(move[0])
+    object['toField'] = fieldToString(move[1])
+    object['figure'] = getFigure(move[2])
+    object['enPassant'] = bool(move[3])
+    object['castle'] = bool(move[4])
+    object['promotion'] = bool(move[5])
+    return object
 
 def movesToJSON(moves):
     list = []
     for move in moves:
-        value = move[1]
-        move = move[0][0]
-        object = {}
-        object['fromField'] = fieldToString(move[0])
-        object['toField'] = fieldToString(move[1])
-        object['figure'] = getFigure(move[2])
-        object['enPassant'] = bool(move[3])
-        object['castle'] = bool(move[4])
-        object['promotion'] = bool(move[5])
-        object['value'] = value
-        list.append(object)
+        list.append(moveToObject(move))
     return {'moves': list}
 
 def movesToJSON2(moves):
     list = []
-    for move in moves:
-        value = move[1]
-        move = move[0]
+    for node in moves:
+        move = node[0]
+        value = node[1]
+        childVal = node[2]
         object = {}
         object['fromField'] = fieldToString(move[0])
         object['toField'] = fieldToString(move[1])
@@ -313,6 +351,7 @@ def movesToJSON2(moves):
         object['castle'] = bool(move[4])
         object['promotion'] = bool(move[5])
         object['value'] = value
+        object['valOfChild'] = childVal
 
         list.append(object)
     return {'moves': list}
