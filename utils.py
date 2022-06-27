@@ -39,7 +39,6 @@ def bits(n):
 
 def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
     if not np.any(field):
-        print(toFen(board))
         return np.uint64(0)
     field = np.max(toNumber(field))
     if (enemy & board.pieceBitboards[2] & allMoves[5][field][2]):
@@ -228,17 +227,22 @@ def iterativeDeepening(timeLimit, board, alpha, beta, maximizingPlayer, list):
 def minimax(board, depth, maximizingPlayer):
     if depth == 0 or isGameDone(board):
         value = evalBoard(board)
-        board.undoAllMoves()
         return value
     if maximizingPlayer:
         value = float('-inf')
-        for child in board.getMoves():
+        moves = board.getMoves()
+        for child in moves:
             value = max(value, minimax(board.doMove(child), depth-1, False))
+            move = board.moveHistoryAB.pop()
+            board.undoMove(move)
         return value
     else:
         value = float('inf')
-        for child in board.getMoves():
+        moves = board.getMoves()
+        for child in moves:
             value = min(value, minimax(board.doMove(child), depth-1, True))
+            move = board.moveHistoryAB.pop()
+            board.undoMove(move)
         return value
 
 def alphaBetaMove(board, depth, alpha, beta):
