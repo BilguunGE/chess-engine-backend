@@ -226,6 +226,7 @@ def alphaBetaMove(board, depth, alpha, beta, isMax):
     result = []
     alphabeta(board, depth, alpha, beta, isMax, True, result)
     # TODO return only one next best move
+    # TODO just a test please delete this comment
     return result
 
 def alphabeta(board, depth, alpha, beta, isMax, isNext, list):
