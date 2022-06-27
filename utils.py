@@ -168,7 +168,11 @@ def isBeat(isBeatable):
     return result
 
 def isGameDone(board):
-    result = isMate(board) or isRemis(board) or isKingOfTheHill(board)
+    if board.isWhite:
+        color = board.white
+    else:
+        color = board.black
+    result = isMate(board) or isRemis(board) or isKingOfTheHill(board, color)
     return result
 
 def isMate(board):
@@ -181,15 +185,30 @@ def isMate(board):
     return (board.moves == [] and inCheck(board, color, enemy, board.isWhite, board.all))
 
 def isRemis(board):
+    if board.isWhite:
+        color = board.white
+        enemy = board.black
+    else:
+        enemy = board.white
+        color = board.black
     # TODO: Other Remis..
-    return (board.halfmove == 100 or board.moves == [])
+    isStaleMate = board.moves == [] and not inCheck(board, color, enemy, board.isWhite, board.all)
+    return (board.halfmove == 100 or isStaleMate)
 
-def isKingOfTheHill(board):
-    result = False
-    for n in board.pieceList[5]:
-        if n == 2**27 or n == 2**28 or n == 2**35 or n == 2**36: # TODO How to do this better?
-            result = True        
-    return result
+def isKingOfTheHill(board, color):
+    """To check if a given color is King of the hill 
+
+    Args:
+        `board`: Board to be checked
+        `color`: color which could be King of the hill
+
+    Returns:
+        1 if color is King of the hill, 0 otherwise
+    """
+    for n in board.pieceList[5] & color:
+        if n == 2**27 or n == 2**28 or n == 2**35 or n == 2**36:
+            return True        
+    return False
 
 
 def now():
@@ -222,41 +241,45 @@ def minimax(board, depth, maximizingPlayer):
             value = min(value, minimax(board.doMove(child), depth-1, True))
         return value
 
-def alphaBetaMove(board, depth, alpha, beta, isMax):
+def alphaBetaMove(board, depth, alpha, beta):
     result = []
-    alphabeta(board, depth, alpha, beta, isMax, True, result)
-    # TODO return only one next best move
-    # TODO just a test please delete this comment
+    if depth <= 0:
+        return
+    moves = board.getMoves()
+    for move in moves:
+        board.doMove(move)
+        value = alphabeta(board, depth-1, alpha, beta, False)
+        result.append({
+                "move": moveToObject(move),
+                "value": value
+            })
+        board.undoLastMove()
+        if value >= beta:
+            break
     return result
 
-def alphabeta(board, depth, alpha, beta, isMax, isNext, list):
+def alphabeta(board, depth, alpha, beta, isMax):
     # TODO doesn't work properly yet. Weird with depth 5 and above. Better way to save next moves and their values? 
     moves = board.getMoves()
     if (depth == 0) or isGameDone(board):
-        value = evalBoard(board) * (1.1**depth)
-        board.undoLastMove()
-        return value
+        return evalBoard(board) * (1.1**depth)
     if isMax:
         value = alpha
         for move in moves:
             board.doMove(move)
-            value = max(value, alphabeta(board, depth - 1, value, beta, False, False, list))
-            if isNext:
-                list.append((move, value))
+            value = max(value, alphabeta(board, depth - 1, value, beta, False))
+            board.undoLastMove()
             if value >= beta:
                 break
-        board.undoLastMove()
         return value
     else:
         value = beta
         for move in moves:
             board.doMove(move)
-            value = min(value, alphabeta(board, depth - 1, alpha, value, True, False, list))
-            if isNext:
-                list.append((move, value))
+            value = min(value, alphabeta(board, depth - 1, alpha, value, True))
+            board.undoLastMove()
             if value <= alpha:
                 break
-        board.undoLastMove()
         return value
 
 def evalBoard(board):
@@ -268,12 +291,11 @@ def evalBoard(board):
     Returns:
         A numeric value for the current board state
     """
-    
-    color = board.white
-    enemy = board.black
-    if not board.isWhite:
-        color = board.black
-        enemy = board.white
+    color = board.black
+    enemy = board.white
+    if board.isWhite:
+        color = board.white
+        enemy = board.black
     pawnDelta = nonzeroElements(
         board.pieceList[0] & color).size - nonzeroElements(board.pieceList[0] & enemy).size
     rookDelta = nonzeroElements(
@@ -286,37 +308,41 @@ def evalBoard(board):
         board.pieceList[4] & color).size - nonzeroElements(board.pieceList[4] & enemy).size
     check = inCheck(board, enemy, color, not board.isWhite, board.all) - \
         inCheck(board, color, enemy, board.isWhite, board.all)
-    # TODO implement multiple evaluation functions => z.B. Ruhesuche bei vielen Figuren
     result = 10 * check + 9 * queenDelta + 5 * rookDelta + 3 * knightDelta + 3 * bishopDelta + 1 * pawnDelta
     
+    kingOfTheHill = isKingOfTheHill(board, color) - isKingOfTheHill(board, enemy)
+    
+    if kingOfTheHill != 0: 
+        result = kingOfTheHill
+    
     if isRemis(board):
-        result = -1 
-    if isKingOfTheHill(board) or isMate(board): #TODO Farbbasiert
-        result = 10000
-    # print("Heuristic value of "+toFen(board)+": ", result, "KingOfTheHill: ", isKingOfTheHill(board))
+        result = -1
+    # if isKingOfTheHill(board) or isMate(board):
+    #     result = factor * 10000
     return result
+
+def moveToObject(move):
+    object = {}
+    object['fromField'] = fieldToString(move[0])
+    object['toField'] = fieldToString(move[1])
+    object['figure'] = getFigure(move[2])
+    object['enPassant'] = bool(move[3])
+    object['castle'] = bool(move[4])
+    object['promotion'] = bool(move[5])
+    return object
 
 def movesToJSON(moves):
     list = []
     for move in moves:
-        value = move[1]
-        move = move[0][0]
-        object = {}
-        object['fromField'] = fieldToString(move[0])
-        object['toField'] = fieldToString(move[1])
-        object['figure'] = getFigure(move[2])
-        object['enPassant'] = bool(move[3])
-        object['castle'] = bool(move[4])
-        object['promotion'] = bool(move[5])
-        object['value'] = value
-        list.append(object)
+        list.append(moveToObject(move))
     return {'moves': list}
 
 def movesToJSON2(moves):
     list = []
-    for move in moves:
-        value = move[1]
-        move = move[0]
+    for node in moves:
+        move = node[0]
+        value = node[1]
+        childVal = node[2]
         object = {}
         object['fromField'] = fieldToString(move[0])
         object['toField'] = fieldToString(move[1])
@@ -325,6 +351,7 @@ def movesToJSON2(moves):
         object['castle'] = bool(move[4])
         object['promotion'] = bool(move[5])
         object['value'] = value
+        object['valOfChild'] = childVal
 
         list.append(object)
     return {'moves': list}

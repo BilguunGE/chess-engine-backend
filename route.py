@@ -1,15 +1,23 @@
 from Board import *
 from utils import toFen, toNumber, movesToJSON2, alphaBetaMove
 
-board  = Board('8/8/5k2/8/8/2K5/8/8 w - - 0 1')
+# board  = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+board  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 
+# TODO Bug
 def initBoard(fenString):
+    print("Executing initBoard")
     global board
     board = Board(fenString)
+    print("Initiated board: ", toFen(board), "("+fenString+")")
+    print(board.getMoves())
     return getMoves()
 
 def getMoves():
-    return movesToJSON2(alphaBetaMove(board, 3, -10000, 10000, True))
+    return movesToJSON(board.getMoves())
+
+def alphaBeta():
+    return { "result" : alphaBetaMove(board, 6, -10000, 10000) }
 
 def testMoves():
     b = board
@@ -20,6 +28,7 @@ def testMoves():
     return {'test':'ok'}
 
 def doMove(move):
+    print("Executing doMove")
     fromField= toNumber(move['fromField'])
     toField= toNumber(move['toField'])
     figure = toNumber(move['figure'])
