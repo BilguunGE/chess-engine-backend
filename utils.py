@@ -37,25 +37,34 @@ def bits(n):
         yield toNumber(b)
         n ^= b
 
+#Gibt ein Tuple zurück wobei der erste Eintrag die attackierten Felder angibt und der Zweit angibt ob es mehrere attackierende Figuren gibt
 def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
     if not np.any(field):
-        return np.uint64(0)
+        print(toFen(board))
+        return (np.uint64(0), False)
     field = np.max(toNumber(field))
     if (enemy & board.pieceBitboards[2] & allMoves[5][field][2]):
-        return (enemy & board.pieceBitboards[2] & allMoves[5][field][2])
+        return ((enemy & board.pieceBitboards[2] & allMoves[5][field][2]), False)
     if (enemy & board.pieceBitboards[5] & allMoves[4][field][2]):
-        return (enemy & board.pieceBitboards[5] & allMoves[4][field][2])
+        return ((enemy & board.pieceBitboards[5] & allMoves[4][field][2]), False)
     if white and (enemy & board.pieceBitboards[0] & allMoves[1][field][2][1]):
-        return (enemy & board.pieceBitboards[0] & allMoves[1][field][2][1])
+        return ((enemy & board.pieceBitboards[0] & allMoves[1][field][2][1]), False)
     if not white and (enemy & board.pieceBitboards[0] & allMoves[0][field][2][1]):
-        return (enemy & board.pieceBitboards[0] & allMoves[0][field][2][1])
+        return ((enemy & board.pieceBitboards[0] & allMoves[0][field][2][1]),False)
     attackerPieces = np.append((allMoves[2][field][1] & (board.pieceBitboards[4] | board.pieceBitboards[1]) & enemy), (allMoves[3][field][1] & (board.pieceBitboards[4] | board.pieceBitboards[3]) & enemy))
     if np.any(attackerPieces):
+        attackers = np.uint64(0)
+        attackersNumber = 0
         for n in nonzeroElements(attackerPieces):
             blockers = between[field][toNumber(n)] & all
             if not blockers:
-                return (between[field][toNumber(n)] | n)
-    return np.uint64(0)
+                attackersNumber += 1
+                attackers |= between[field][toNumber(n)] | n
+        if attackersNumber == 2:
+            return (attackers,True)
+        else: 
+            return (attackers,False)
+    return (np.uint64(0),False)
 
 
 def inCheck(board, color: np.uint64, enemy: np.uint64, white: bool, all):
@@ -181,7 +190,7 @@ def isMate(board):
     else:
         enemy = board.white
         color = board.black
-    return (board.moves == [] and inCheck(board, color, enemy, board.isWhite, board.all))
+    return (board.moves == [] and inCheck(board, color, enemy, board.isWhite, board.all)[0])
 
 def isRemis(board):
     if board.isWhite:
@@ -310,8 +319,8 @@ def evalBoard(board):
         board.pieceList[3] & color).size - nonzeroElements(board.pieceList[3] & enemy).size
     queenDelta = nonzeroElements(
         board.pieceList[4] & color).size - nonzeroElements(board.pieceList[4] & enemy).size
-    check = inCheck(board, enemy, color, not board.isWhite, board.all) - \
-        inCheck(board, color, enemy, board.isWhite, board.all)
+    check = (inCheck(board, enemy, color, not board.isWhite, board.all)[0] & ~np.uint64(0)) - \
+        (inCheck(board, color, enemy, board.isWhite, board.all)[0] & ~np.uint64(0))
     result = 10 * check + 9 * queenDelta + 5 * rookDelta + 3 * knightDelta + 3 * bishopDelta + 1 * pawnDelta
     
     kingOfTheHill = isKingOfTheHill(board, color) - isKingOfTheHill(board, enemy)
@@ -324,6 +333,7 @@ def evalBoard(board):
     # if isKingOfTheHill(board) or isMate(board):
     #     result = factor * 10000
     return result
+
 
 def moveToObject(move):
     object = {}
