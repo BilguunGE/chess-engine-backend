@@ -4,7 +4,7 @@ from moves import *
 import time
 from copy import deepcopy
 
-
+#gibt die Stringrepresentation eines spezifischen aktivierten Bits zurück Bsp: 1 --> A8
 def fieldToString(field: np.uint64):
     field = np.ceil(np.log2(field)).astype(int)
     y = field%8
@@ -12,6 +12,7 @@ def fieldToString(field: np.uint64):
     txt = 'abcdefgh'[int(y)] + '12345678'[int(7-x)]
     return txt
 
+#gibt für die Nummer den spezifischen Spielsteintyp zurück
 def numberToPiece(number):
     if number == 0:
         return 'Pawn'
@@ -27,10 +28,12 @@ def numberToPiece(number):
         return 'King'
     return '-'
 
+#gibt die Nummer des Spielfeldes zurück welches dem Exponenten der Bitrepräsentation entspricht Bsp: B8 = 2 = 2^1 = 0x10 --> 1
 def toNumber(field: Union[np.ndarray, np.uint64]) -> Union[np.ndarray, np.uint64]:
     field = np.ceil(np.log2(field)).astype(int)
     return field
 
+#gibt die Position aller gesetzten Bits als Builder Objekt zurück über das man iterieren kann Bsp: 3 = 0x11 --> 0 und 1
 def bits(n):
     while n:
         b = n & (~n+np.uint(1))
@@ -66,7 +69,7 @@ def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
             return (attackers,False)
     return (np.uint64(0),False)
 
-
+#gibt zurück auf welche Felder Figuren ziehen können welche den König angreifen. Falls er nicht im Schach steht --> 0
 def inCheck(board, color: np.uint64, enemy: np.uint64, white: bool, all):
     kingN = nonzeroElements(board.pieceList[5] & color)
     result = 0
@@ -74,6 +77,7 @@ def inCheck(board, color: np.uint64, enemy: np.uint64, white: bool, all):
         result = 1
     return result
 
+#returned den Fen der Boardinstanz
 def toFen(board):
     boardTxt = ['-']*64
     for n in board.pieceList[0]:
@@ -143,9 +147,11 @@ def toFen(board):
     fen += str(board.halfmove) + ' ' + str(board.fullmove)
     return fen
 
+#gibt alle Elemente eines Numpyarrays zurück die nicht null sind
 def nonzeroElements(array: np.ndarray):
     return array[np.nonzero(array)]
 
+#gibt Bitboard aller Pieces zurück die zwischen dem König und einem gegnerischen Bishop Rook oder Queen stehen ohne das eine andere Figure dazwischen steht
 def pinned(board, color: np.uint64, enemy: np.uint64):
     king = np.max(board.pieceList[5] & color)
     kNumber = toNumber(king)

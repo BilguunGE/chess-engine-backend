@@ -10,33 +10,52 @@ allShadows = allShadowsGen()
 ## alle Felder zwischen Feld1 und Feld unterteilt in [Feld1][Felder zwischen Feld1 unf Feld2] wobei die Felder in uint Repräsentation vorliegen
 between = betweenGen()
 
+#alle möglichen positionen von denen aus die jeweiligen Pawns promoted werden können
 blackPromotions = np.uint64(18374686479671623680)
 whitePromotions = np.uint64(255)
+#Position der Starbishops
 castleBoards = np.array([9223372036854775808,72057594037927936,128,1],dtype=np.uint64)
+#Vergleichs-Table um zu erkennen welche Castles noch möglich sind
 possibleCastles = np.array([1,2,4,8],dtype=np.uint8)
 zobTable = [[random.randint(1,2**64 - 1) for i in range(12)]for j in range(64)]
 
 
 max = 'w'
 
+#Board Klasse ist die Representation eines spezifischen Zustandes in einem Schachspiel mit allen Informationen die benötigt werden 
 class Board:
+    #gibt an welche Positionen auf dem Brett belegt werden indem diese Bits aktiviert sind
+    #angefangen von oben rechts den Reihen nach nach unten Links 
+    #Bsp: Ein Brett wo nur die obere Rechte Ecke besetzt ist also A8 hat den Wert 1 = 2^0 = 0x1 --> B8 hätte den Wert 2 = 2^1 = 0x10 --> C8 den Wert 4 = 2^2 = 0x100 usw...
     all = np.uint64(0)
     ##pieceNr == 0-Pawn, 1-Rook, 2-Knight, 3-Bishop, 4-Queen, 5-King
     pieceList = [np.array([], dtype=np.uint64)]*6
+    #Das gleiche wie all nur für alle weißen Spielfiguren 
     white = np.uint64(0)
+    #Das gleiche wie all nur für alle schwarzen Spielfiguren
     black = np.uint64(0)
+    #alle möglichen castles wobei die ersten Beiden Bits für die weißen castles und die letzten beiden Bits für die schwarzen castles stehen
     castle = np.uint8(0)
+    #Das Feld des Pawns der im letzten Zug einen doppelMove gemacht hat
     en_passant = np.uint64(0)
+    #wichtig für die 50 Züge Regel
     halfmove = 0
+    #Anzahl der Züge seit Spielbeginn
     fullmove = 1
+    #Zeigt welcher Spieler an der Reihe ist. Bei True = Weiß
     isWhite = True
+    #Liste der zuletzt gezogenen Moves
     moveHistoryAB = []
+    #Hashrepräsentation des Spielfelds mit Hilfe der zobTable
     hash = 0
+    #mögliche Moves welche der derzeitige Spieler in diesem Spielzustand machen kann. Moves werden repräsentiert als Liste mit [VonFeld, ZuFeld, Spielsteinart, 
+    #kam es zu einem EnPassant, wurde gecastled und welches castle, kam es zu einer Promotion und zu welchem Spielstein]
     moves = []
+    #wie die pieceList bloß als Bitboards
     pieceBitboards = np.zeros(shape=6,dtype=np.uint64)
     ttable = {}
 
-
+    #initialisiert das Board aus einem Fenstring
     def __init__(self,fenString):
         fen = fenString.split()
         fenArray = fen[0].split('/')
@@ -88,6 +107,7 @@ class Board:
         self.hash = self.getHash()
         self.updateBitboard()
     
+    #updated die pieceBitboards
     def updateBitboard(self):
         self.pieceBitboards[0] = np.bitwise_or.reduce(self.pieceList[0])
         self.pieceBitboards[1] = np.bitwise_or.reduce(self.pieceList[1])
@@ -96,6 +116,7 @@ class Board:
         self.pieceBitboards[4] = np.bitwise_or.reduce(self.pieceList[4])
         self.pieceBitboards[5] = np.bitwise_or.reduce(self.pieceList[5])
 
+    #berechnet alle möglichen Moves und speichert diese in moves
     def getMoves(self):
         self.moves = []
         color = self.white
@@ -127,6 +148,7 @@ class Board:
             self.getQueenMoves(color,enemy,allPinned,checkFilter)
         return self.moves
        
+    #berechnet alle PawnMoves
     def getPawnMoves(self,color,enemy,allPinned,checkFilter):
         if self.isWhite:
             for n in nonzeroElements(self.pieceList[0] & color):
@@ -185,6 +207,7 @@ class Board:
                             if not (self.en_passant & i) or not inCheck(self,color,enemy,self.isWhite,all)[0]:
                                 self.moves.append((n,i,0,(n<<np.uint64(16)==i),np.uint64(0),np.uint64(0)))
 
+    #berechnet alle RookMoves
     def getRookMoves(self,color,enemy,allPinned,checkFilter):
         for n in nonzeroElements(self.pieceList[1] & color):
             pieceFieldNumber = np.max(toNumber(n))
@@ -211,6 +234,7 @@ class Board:
                     for i in newMoves:
                         self.moves.append((n,i,1,False,np.uint64(0),np.uint64(0)))
 
+    #berechnet alle BishopMoves
     def getBishopMoves(self,color,enemy,allPinned,checkFilter):
         for n in nonzeroElements(self.pieceList[3] & color):
             pieceFieldNumber = np.max(toNumber(n))
@@ -237,6 +261,7 @@ class Board:
                     for i in newMoves:
                         self.moves.append((n,i,3,False,np.uint64(0),np.uint64(0)))
 
+    #berechnet alle KnightMoves
     def getKnightMoves(self,color,allPinned,checkFilter):
         for n in nonzeroElements(self.pieceList[2] & color):
             pieceFieldNumber = np.max(toNumber(n))
@@ -254,7 +279,8 @@ class Board:
                 else:
                     for i in newMoves:
                         self.moves.append((n,i,2,False,np.uint64(0),np.uint64(0)))
-    
+
+    #berechnet alle KingMoves
     def getKingMoves(self,color,enemy):
         for n in nonzeroElements(self.pieceList[5] & color):
             pieceFieldNumber = np.max(toNumber(n))
@@ -280,7 +306,8 @@ class Board:
                                 self.moves.append((n,n >> np.uint64(2),5,False,np.uint64(4),np.uint64(0)))
                             else:
                                 self.moves.append((n,n >> np.uint64(2),5,False,np.uint64(8),np.uint64(0)))
-    
+
+    #berechnet alle QueenMoves
     def getQueenMoves(self,color,enemy,allPinned,checkFilter):
         for n in nonzeroElements(self.pieceList[4] & color):
             pieceFieldNumber = np.max(toNumber(n))
@@ -331,6 +358,7 @@ class Board:
                     for i in newMoves:
                         self.moves.append((n,i,4,False,np.uint64(0),np.uint64(0)))
     
+    #Führt den ausgewählten Move aus und updated die moveListe, alle Paramete und den Hashwert
     def doMove(self, move, persistant = False):
         ##pieceNr == 0-Pawn, 1-Rook, 2-Knight, 3-Bishop, 4-Queen, 5-King
         fromField = move[0]
@@ -464,6 +492,7 @@ class Board:
         self.moves = []
         return self
 
+    #undoed einen spezifischen Move und updated das Board
     def undoMove(self, undoMove):
         move = undoMove[0]
         fromField = move[0]
@@ -540,19 +569,23 @@ class Board:
         self.moves = []
         return self
 
+    #undoed alle Moves seit Beginn der Berechnung
     def undoAllMoves(self):
         while len(self.moveHistoryAB) > 0:
             move = self.moveHistoryAB.pop()
             self.undoMove(move)
 
+    #undoed den letzten Move
     def undoLastMove(self):
         if len(self.moveHistoryAB) > 0:
             move = self.moveHistoryAB.pop()
             self.undoMove(move)
     
+    #erstellt eine Kopie des Boards
     def deepcopy(self):
         return Board(toFen(self))
 
+    #berechnet den Hash wert mit Hilfe der ZobTable
     def getHash(self):
         hash = 0
         for x in range(6):
@@ -571,10 +604,3 @@ class Board:
 
     def getEntry(self):
         return self.ttable.get(self.getHash())
-
-
-def getFen(fen):
-    self = Board(fen)
-    self.getMoves()
-    self.doMove(self.moves[0])
-    return toFen(self) ##toFen(doMove(self,moves[0][0],moves[0][1],moves[0][2],moves[0][3],moves[0][4],moves[0][5]))
