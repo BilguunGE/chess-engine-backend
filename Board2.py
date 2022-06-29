@@ -11,6 +11,7 @@ def makeField(row, col):
 
 class Board:
     ZERO_STRING = "0000000000000000000000000000000000000000000000000000000000000000"
+    ZERO = np.uint64(0)
     ONE = np.uint64(1)
     TWO = np.uint64(2)
     FILE_A=np.uint64(72340172838076673)
@@ -22,29 +23,20 @@ class Board:
     RANK_5=np.uint64(4278190080)
     RANK_8=np.uint64(255)
 
-    RankMasks8 = {'1': np.uint64(0xFF), '2': np.uint64(0xFF00), '3': np.uint64(0xFF0000), '4': np.uint64(0xFF000000), '5': np.uint64(
-        0xFF00000000), '6': np.uint64(0xFF0000000000), '7': np.uint(0xFF000000000000), '8': np.uint64(0xFF00000000000000)}
+    RankMasks8 = [np.uint64(0xFF),np.uint64(0xFF00), np.uint64(0xFF0000), np.uint64(0xFF000000), np.uint64(
+        0xFF00000000), np.uint64(0xFF0000000000), np.uint(0xFF000000000000), np.uint64(0xFF00000000000000)]
+
     FileMasks8 = {
         'a': np.uint64(0x101010101010101), 'b': np.uint64(0x202020202020202), 'c': np.uint64(0x404040404040404), 'd': np.uint64(0x808080808080808),
         'e': np.uint64(0x1010101010101010), 'f': np.uint64(0x2020202020202020), 'g': np.uint64(0x4040404040404040), 'h': np.uint64(0x8080808080808080)}
     
-    DiagonalMasks8 = [
-	np.uint64(0x1), np.uint64(0x102), np.uint64(0x10204), np.uint64(0x1020408), np.uint64(
-	    0x102040810), np.uint64(0x10204081020), np.uint64(0x1020408102040),
-	np.uint64(0x102040810204080), np.uint64(0x204081020408000), np.uint64(
-	    0x408102040800000), np.uint64(0x810204080000000),
-	np.uint64(0x1020408000000000), np.uint64(0x2040800000000000), np.uint64(
-	    0x4080000000000000), np.uint64(0x8000000000000000)
-    ]
+    FileMasks82 = [
+         np.uint64(0x101010101010101),  np.uint64(0x202020202020202), np.uint64(0x404040404040404), np.uint64(0x808080808080808),
+         np.uint64(0x1010101010101010),  np.uint64(0x2020202020202020),  np.uint64(0x4040404040404040),np.uint64(0x8080808080808080)]
     
-    AntiDiagonalMasks8 = [
-	np.uint64(0x80), np.uint64(0x8040), np.uint64(0x804020), np.uint64(0x80402010), np.uint64(
-	    0x8040201008), np.uint64(0x804020100804), np.uint64(0x80402010080402),
-	np.uint64(0x8040201008040201), np.uint64(0x4020100804020100), np.uint64(
-	    0x2010080402010000), np.uint64(0x1008040201000000),
-	np.uint64(0x804020100000000), np.uint64(0x402010000000000), np.uint64(
-	    0x201000000000000), np.uint64(0x100000000000000)
-    ]
+    DiagonalMasks8 = [np.uint64(0x1), np.uint64(0x102), np.uint64(0x10204), np.uint64(0x1020408), np.uint64(0x102040810), np.uint64(0x10204081020), np.uint64(0x1020408102040),np.uint64(0x102040810204080), np.uint64(0x204081020408000), np.uint64(0x408102040800000), np.uint64(0x810204080000000),np.uint64(0x1020408000000000), np.uint64(0x2040800000000000), np.uint64(0x4080000000000000), np.uint64(0x8000000000000000)]
+    
+    AntiDiagonalMasks8 = [np.uint64(0x80), np.uint64(0x8040), np.uint64(0x804020), np.uint64(0x80402010), np.uint64(0x8040201008), np.uint64(0x804020100804), np.uint64(0x80402010080402),np.uint64(0x8040201008040201), np.uint64(0x4020100804020100), np.uint64(0x2010080402010000), np.uint64(0x1008040201000000),np.uint64(0x804020100000000), np.uint64(0x402010000000000), np.uint64(0x201000000000000), np.uint64(0x100000000000000)]
         
     WP = np.uint64(0)
     WN = np.uint64(0)
@@ -188,12 +180,15 @@ class Board:
         # same here
         self.WHITE_PIECES = self.WP | self.WN | self.WB | self.WR | self.WQ
 
+        #added BK to avoid illegal capture
+        self.NOT_WHITE_PIECES = ~(self.WP | self.WN | self.WB | self.WR | self.WQ | self.WK | self.BK)
+
         self.OCCUPIED = self.WP | self.WN | self.WB | self.WR | self.WQ | self.WK | self.BP | self.BN | self.BB | self.BR | self.BQ | self.BK
 
         # board with empty fields
         self.EMPTY= ~self.OCCUPIED
 
-        return self.getMovesP()
+        return self.getMovesWQ()
 
     def getMovesP(self):
         moves = []
@@ -298,18 +293,86 @@ class Board:
 
         return moves
 
-    def HAndVMoves(self, s:np.uint64):
-        binaryS = np.uint64(1 << s)
-        possibilitiesHorizontal = (self.OCCUPIED - self.TWO * binaryS) ^ np.invert(np.invert(self.OCCUPIED) - self.TWO * np.invert(binaryS))
-        possibilitiesVertical = ((self.OCCUPIED & self.FileMasks8[s % 8]) - (self.TWO * binaryS)) ^ np.invert(np.invert(self.OCCUPIED & self.FileMasks8[s % 8]) - (self.TWO * np.invert(binaryS)))
-        return (possibilitiesHorizontal & self.RankMasks8[(s // 8)]) | (possibilitiesVertical & self.FileMasks8[s % 8])
+    def HAndVMoves(self, s):
+        binaryS = self.ONE << np.uint64(s)
+        possibilitiesHorizontal = (self.OCCUPIED - self.TWO * binaryS) ^ reverse(reverse(self.OCCUPIED) - self.TWO * reverse(binaryS))
+        possibilitiesVertical = ((self.OCCUPIED & self.FileMasks82[s % 8]) - (self.TWO * binaryS)) ^ reverse(reverse(self.OCCUPIED & self.FileMasks82[s % 8]) - (self.TWO * reverse(binaryS)))
+        return (possibilitiesHorizontal & self.RankMasks8[(s // 8)]) | (possibilitiesVertical & self.FileMasks82[s % 8])
     
-    def DAndAntiDMoves(self, s:np.uint64):
-        binaryS = np.uint64(1 << s)
-        possibilitiesDiagonal = ((self.OCCUPIED & self.DiagonalMasks8[(s // 8) + (s % 8)]) - (self.TWO * binaryS)) ^ np.invert(np.invert(self.OCCUPIED & self.DiagonalMasks8[(s // 8) + (s % 8)]) - (self.TWO * np.invert(binaryS)))
-        possibilitiesAntiDiagonal = ((self.OCCUPIED & self.AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (self.TWO * binaryS)) ^ np.invert(np.invert(self.OCCUPIED & self.AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (self.TWO * np.invert(binaryS)))
+    def DAndAntiDMoves(self, s:int):
+        binaryS =self.ONE << np.uint64(s)
+        possibilitiesDiagonal = ((self.OCCUPIED & self.DiagonalMasks8[(s // 8) + (s % 8)]) - (self.TWO * binaryS)) ^ reverse(reverse(self.OCCUPIED & self.DiagonalMasks8[(s // 8) + (s % 8)]) - (self.TWO * reverse(binaryS)))
+        possibilitiesAntiDiagonal = ((self.OCCUPIED & self.AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (self.TWO * binaryS)) ^ reverse(reverse(self.OCCUPIED & self.AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (self.TWO * reverse(binaryS)))
         return (possibilitiesDiagonal & self.DiagonalMasks8[(s // 8) + (s % 8)]) | (possibilitiesAntiDiagonal & self.AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)])
     
-b = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+    def getMovesWB(self):
+        moves = []
+        WB = self.WB
+        i = WB&~(WB - self.ONE)
+        while(i != 0):
+            iLocation = trailing(i)
+            possibility = self.DAndAntiDMoves(iLocation) & self.NOT_WHITE_PIECES
+            j = possibility & ~(possibility - self.ONE)
+            while (j != 0):
+                move = {}
+                index = trailing(j)
+                move['toString'] = "B"+makeField((iLocation//8),iLocation%8)+'-'+makeField((index//8),index%8)
+                moves.append(move)
+                possibility&=~j
+                j = possibility & ~(possibility - self.ONE)
+            WB &= ~i
+            i = WB&~(WB - self.ONE)
+        return moves
+    
+    def getMovesWR(self):
+        moves = []
+        WR = self.WR
+        i = WR&~(WR - self.ONE)
+        while(i != 0):
+            iLocation = trailing(i)
+            possibility = self.HAndVMoves(iLocation) & self.NOT_WHITE_PIECES
+            j = possibility & ~(possibility - self.ONE)
+            while (j != 0):
+                move = {}
+                index = trailing(j)
+                move['toString'] = "R"+makeField((iLocation//8),iLocation%8)+'-'+makeField((index//8),index%8)
+                moves.append(move)
+                possibility&=~j
+                j = possibility & ~(possibility - self.ONE)
+            WR &= ~i
+            i = WR&~(WR - self.ONE)
+        return moves
+    
+    def getMovesWQ(self):
+        moves = []
+        WQ = self.WQ
+        i = WQ&~(WQ - self.ONE)
+        while(i != 0):
+            iLocation = trailing(i)
+            possibility = (self.DAndAntiDMoves(iLocation) | self.HAndVMoves(iLocation) )& self.NOT_WHITE_PIECES
+            j = possibility & ~(possibility - self.ONE)
+            while (j != 0):
+                move = {}
+                index = trailing(j)
+                move['toString'] = "Q"+makeField((iLocation//8),iLocation%8)+'-'+makeField((index//8),index%8)
+                moves.append(move)
+                possibility&=~j
+                j = possibility & ~(possibility - self.ONE)
+            WQ &= ~i
+            i = WQ&~(WQ - self.ONE)
+        return moves
+        
+def trailing(s):
+    s = np.binary_repr(s,width=64)
+    return len(s) - len(s.rstrip('0'))
+
+def reverse(s):
+    s = np.binary_repr(s,width=64)
+    return np.uint64(int(s[::-1], 2))
+
+
+
+  
+    
+b = Board('rnbqkbnr/p1p1p1pp/1p1p1p2/8/8/1PPQ2B1/1PP1PPPP/RNB1K1NR w KQkq - 0 1')
 print((b.getMoves()))
-print(np.binary_repr(b.WP))
