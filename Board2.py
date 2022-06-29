@@ -1,6 +1,8 @@
 import re
+from tkinter import ON
 import numpy as np
 from helpers import *
+from constants import *
 
 
 def makeField(row, col):
@@ -10,44 +12,6 @@ def makeField(row, col):
 
 
 class Board:
-    ZERO_STRING = "0000000000000000000000000000000000000000000000000000000000000000"
-    FILE_A=np.uint64(72340172838076673)
-    FILE_H=np.uint64(-9187201950435737472)
-    FILE_AB=np.uint64(217020518514230019)
-    FILE_GH=np.uint64(-4557430888798830400)
-    RANK_1=np.uint64(-72057594037927936)
-    RANK_4=np.uint64(1095216660480)
-    RANK_5=np.uint64(4278190080)
-    RANK_8=np.uint64(255)
-    
-
-    KNIGHT_SPAN = np.uint64(43234889994)
-    # KNIGHT_SPAN = strBBtoBB("""
-    #     00000000
-    #     00000000
-    #     00000000
-    #     00001010
-    #     00010001
-    #     00000000
-    #     00010001
-    #     00001010
-    # """)
-
-    RankMasks8 = [np.uint64(0xFF),np.uint64(0xFF00), np.uint64(0xFF0000), np.uint64(0xFF000000), np.uint64(
-        0xFF00000000), np.uint64(0xFF0000000000), np.uint64(0xFF000000000000), np.uint64(0xFF00000000000000)]
-
-    FileMasks8 = {
-        'a': np.uint64(0x101010101010101), 'b': np.uint64(0x202020202020202), 'c': np.uint64(0x404040404040404), 'd': np.uint64(0x808080808080808),
-        'e': np.uint64(0x1010101010101010), 'f': np.uint64(0x2020202020202020), 'g': np.uint64(0x4040404040404040), 'h': np.uint64(0x8080808080808080)}
-    
-    FileMasks82 = [
-         np.uint64(0x101010101010101),  np.uint64(0x202020202020202), np.uint64(0x404040404040404), np.uint64(0x808080808080808),
-         np.uint64(0x1010101010101010),  np.uint64(0x2020202020202020),  np.uint64(0x4040404040404040),np.uint64(0x8080808080808080)]
-    
-    DiagonalMasks8 = [np.uint64(0x1), np.uint64(0x102), np.uint64(0x10204), np.uint64(0x1020408), np.uint64(0x102040810), np.uint64(0x10204081020), np.uint64(0x1020408102040),np.uint64(0x102040810204080), np.uint64(0x204081020408000), np.uint64(0x408102040800000), np.uint64(0x810204080000000),np.uint64(0x1020408000000000), np.uint64(0x2040800000000000), np.uint64(0x4080000000000000), np.uint64(0x8000000000000000)]
-    
-    AntiDiagonalMasks8 = [np.uint64(0x80), np.uint64(0x8040), np.uint64(0x804020), np.uint64(0x80402010), np.uint64(0x8040201008), np.uint64(0x804020100804), np.uint64(0x80402010080402),np.uint64(0x8040201008040201), np.uint64(0x4020100804020100), np.uint64(0x2010080402010000), np.uint64(0x1008040201000000),np.uint64(0x804020100000000), np.uint64(0x402010000000000), np.uint64(0x201000000000000), np.uint64(0x100000000000000)]
-        
     WP = np.uint64(0)
     WN = np.uint64(0)
     WB = np.uint64(0)
@@ -115,7 +79,7 @@ class Board:
 
     def convertArraysToBitboards(self):
         for i in range(64):
-            binary = self.ZERO_STRING[i+1:] + "1" + self.ZERO_STRING[0:i]
+            binary = ZERO_STRING[i+1:] + "1" + ZERO_STRING[0:i]
             num = np.uint64(int(binary, 2))
             row = (i // 8)
             col = i % 8
@@ -198,7 +162,7 @@ class Board:
         # board with empty fields
         self.EMPTY= ~self.OCCUPIED
 
-        return self.getMovesWN()
+        return self.getMovesWK()
 
     def getMovesP(self):
         moves = []
@@ -207,12 +171,12 @@ class Board:
             color = -1
 
         # beat right
-        PAWN_MOVES = (self.WP >> np.uint64(7)) & self.BLACK_PIECES & ~self.RANK_8 & ~ self.FILE_A
-        PAWN_MOVES_PROMO = (self.WP >> np.uint64(7)) & self.BLACK_PIECES & self.RANK_8 & ~self.FILE_A
+        PAWN_MOVES = (self.WP >> np.uint64(7)) & self.BLACK_PIECES & ~RANK_8 & ~ FILE_A
+        PAWN_MOVES_PROMO = (self.WP >> np.uint64(7)) & self.BLACK_PIECES & RANK_8 & ~FILE_A
 
         if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << np.uint64(7)) & self.WHITE_PIECES & ~self.RANK_1 & ~ self.FILE_H
-            PAWN_MOVES_PROMO = (self.BP << np.uint64(7)) & self.WHITE_PIECES & self.RANK_1 & ~self.FILE_H
+            PAWN_MOVES = (self.BP << np.uint64(7)) & self.WHITE_PIECES & ~RANK_1 & ~ FILE_H
+            PAWN_MOVES_PROMO = (self.BP << np.uint64(7)) & self.WHITE_PIECES & RANK_1 & ~FILE_H
 
         for i in range(64):
             move = {}
@@ -224,12 +188,12 @@ class Board:
                 moves.append(move)
 
         # beat left
-        PAWN_MOVES = (self.WP >> np.uint64(9)) & self.BLACK_PIECES & ~self.RANK_8 & ~ self.FILE_H
-        PAWN_MOVES_PROMO = (self.WP >> np.uint64(9)) & self.BLACK_PIECES & self.RANK_8 & ~self.FILE_H
+        PAWN_MOVES = (self.WP >> np.uint64(9)) & self.BLACK_PIECES & ~RANK_8 & ~ FILE_H
+        PAWN_MOVES_PROMO = (self.WP >> np.uint64(9)) & self.BLACK_PIECES & RANK_8 & ~FILE_H
 
         if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << np.uint64(9)) & self.WHITE_PIECES & ~self.RANK_1 & ~ self.FILE_A
-            PAWN_MOVES_PROMO = (self.BP << np.uint64(9)) & self.WHITE_PIECES & self.RANK_1 & ~self.FILE_A
+            PAWN_MOVES = (self.BP << np.uint64(9)) & self.WHITE_PIECES & ~RANK_1 & ~ FILE_A
+            PAWN_MOVES_PROMO = (self.BP << np.uint64(9)) & self.WHITE_PIECES & RANK_1 & ~FILE_A
 
         for i in range(64):
             move = {}
@@ -241,12 +205,12 @@ class Board:
                 moves.append(move)
 
         # move 1 forward
-        PAWN_MOVES = (self.WP >> np.uint64(8)) & self.EMPTY & ~self.RANK_8
-        PAWN_MOVES_PROMO = (self.WP >> np.uint64(8)) & self.EMPTY & self.RANK_8
+        PAWN_MOVES = (self.WP >> np.uint64(8)) & self.EMPTY & ~RANK_8
+        PAWN_MOVES_PROMO = (self.WP >> np.uint64(8)) & self.EMPTY & RANK_8
 
         if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << np.uint64(8)) & self.EMPTY & ~self.RANK_1
-            PAWN_MOVES_PROMO = (self.BP << np.uint64(8)) & self.EMPTY & self.RANK_1
+            PAWN_MOVES = (self.BP << np.uint64(8)) & self.EMPTY & ~RANK_1
+            PAWN_MOVES_PROMO = (self.BP << np.uint64(8)) & self.EMPTY & RANK_1
 
         for i in range(64):
             move = {}
@@ -258,10 +222,10 @@ class Board:
                 moves.append(move)
 
         # move 2 forward
-        PAWN_MOVES = (self.WP >> np.uint64(16)) & self.EMPTY & (self.EMPTY >> np.uint64(8)) & self.RANK_4
+        PAWN_MOVES = (self.WP >> np.uint64(16)) & self.EMPTY & (self.EMPTY >> np.uint64(8)) & RANK_4
     
         if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << np.uint64(16)) & self.EMPTY & (self.EMPTY << np.uint64(8)) & self.RANK_5
+            PAWN_MOVES = (self.BP << np.uint64(16)) & self.EMPTY & (self.EMPTY << np.uint64(8)) & RANK_5
 
         for i in range(64):
             move = {}
@@ -271,13 +235,13 @@ class Board:
                 moves.append(move)
 
         if self.enPassant != '-':
-            RANK = self.FileMasks8[self.enPassant[0]]
+            RANK = FileMasks8[self.enPassant[0]]
 
             # en passant right
-            PAWN_MOVES = (self.WP << ONE) & self.BP & self.RANK_5 & ~self.FILE_A & RANK
+            PAWN_MOVES = (self.WP << ONE) & self.BP & RANK_5 & ~FILE_A & RANK
             
             if not self.isWhiteTurn:
-                PAWN_MOVES = (self.BP >> ONE) & self.WP & self.RANK_4 & ~self.FILE_H & RANK
+                PAWN_MOVES = (self.BP >> ONE) & self.WP & RANK_4 & ~FILE_H & RANK
             
             for i in range(64):
                 move = {}
@@ -288,10 +252,10 @@ class Board:
                     moves.append(move)
 
             # en passant left
-            PAWN_MOVES = (self.WP >> ONE) & self.BP & self.RANK_5 & ~self.FILE_H & RANK
+            PAWN_MOVES = (self.WP >> ONE) & self.BP & RANK_5 & ~FILE_H & RANK
 
             if not self.isWhiteTurn:
-                PAWN_MOVES = (self.BP << ONE) & self.WP & self.RANK_4 & ~self.FILE_A & RANK
+                PAWN_MOVES = (self.BP << ONE) & self.WP & RANK_4 & ~FILE_A & RANK
 
             for i in range(64):
                 move = {}
@@ -306,14 +270,14 @@ class Board:
     def HAndVMoves(self, s):
         binaryS = ONE << np.uint64(s)
         possibilitiesHorizontal = (self.OCCUPIED - TWO * binaryS) ^ reverse(reverse(self.OCCUPIED) - TWO * reverse(binaryS))
-        possibilitiesVertical = ((self.OCCUPIED & self.FileMasks82[s % 8]) - (TWO * binaryS)) ^ reverse(reverse(self.OCCUPIED & self.FileMasks82[s % 8]) - (TWO * reverse(binaryS)))
-        return (possibilitiesHorizontal & self.RankMasks8[(s // 8)]) | (possibilitiesVertical & self.FileMasks82[s % 8])
+        possibilitiesVertical = ((self.OCCUPIED & FileMasks82[s % 8]) - (TWO * binaryS)) ^ reverse(reverse(self.OCCUPIED & FileMasks82[s % 8]) - (TWO * reverse(binaryS)))
+        return (possibilitiesHorizontal & RankMasks8[(s // 8)]) | (possibilitiesVertical & FileMasks82[s % 8])
     
     def DAndAntiDMoves(self, s:int):
         binaryS =ONE << np.uint64(s)
-        possibilitiesDiagonal = ((self.OCCUPIED & self.DiagonalMasks8[(s // 8) + (s % 8)]) - (TWO * binaryS)) ^ reverse(reverse(self.OCCUPIED & self.DiagonalMasks8[(s // 8) + (s % 8)]) - (TWO * reverse(binaryS)))
-        possibilitiesAntiDiagonal = ((self.OCCUPIED & self.AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * binaryS)) ^ reverse(reverse(self.OCCUPIED & self.AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * reverse(binaryS)))
-        return (possibilitiesDiagonal & self.DiagonalMasks8[(s // 8) + (s % 8)]) | (possibilitiesAntiDiagonal & self.AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)])
+        possibilitiesDiagonal = ((self.OCCUPIED & DiagonalMasks8[(s // 8) + (s % 8)]) - (TWO * binaryS)) ^ reverse(reverse(self.OCCUPIED & DiagonalMasks8[(s // 8) + (s % 8)]) - (TWO * reverse(binaryS)))
+        possibilitiesAntiDiagonal = ((self.OCCUPIED & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * binaryS)) ^ reverse(reverse(self.OCCUPIED & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * reverse(binaryS)))
+        return (possibilitiesDiagonal & DiagonalMasks8[(s // 8) + (s % 8)]) | (possibilitiesAntiDiagonal & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)])
     
     def getMovesWB(self):
         moves = []
@@ -376,23 +340,16 @@ class Board:
         moves = []
         WN = self.WN
         i = WN &~(WN - ONE)
-        # printBits(self.WHITE_PIECES, "notwhite")
-        # printBits(self.FILE_AB)
-        # printBits(self.FILE_GH)
-        printBits(WN)
         while i != 0:
             iLoc = trailingZeros(i) #loc of N
             if iLoc >  18:
-                possibility = self.KNIGHT_SPAN << np.uint64(iLoc-18)
-                printBits(possibility,">18") 
+                possibility = KNIGHT_SPAN << np.uint64(iLoc-18)
             else:
-                possibility = self.KNIGHT_SPAN >> np.uint64(18 - iLoc)
-                printBits(possibility,"<=18") 
+                possibility = KNIGHT_SPAN >> np.uint64(18 - iLoc)
             if iLoc%8 < 4:
-                possibility &= ~self.FILE_GH & self.NOT_WHITE_PIECES
+                possibility &= ~FILE_GH & self.NOT_WHITE_PIECES
             else:
-                possibility &= ~self.FILE_AB & self.NOT_WHITE_PIECES
-            printBits(possibility,"nach if else")
+                possibility &= ~FILE_AB & self.NOT_WHITE_PIECES
             j = possibility &~(possibility-ONE)
             while j != 0:
                 index = trailingZeros(j) 
@@ -404,7 +361,87 @@ class Board:
             WN &=~i
             i = WN &~(WN - ONE)
         return moves
+    
+    def getMovesWK(self):
+        moves = []
+        WK = self.WK
+        iLoc = trailingZeros(WK)
+        if iLoc >  9:
+            possibility = KING_SPAN << np.uint64(iLoc-9)
+        else:
+            possibility = KING_SPAN >> np.uint64(9 - iLoc)
+        if iLoc%8 < 4:
+            possibility &= ~FILE_GH & self.NOT_WHITE_PIECES
+        else:
+            possibility &= ~FILE_AB & self.NOT_WHITE_PIECES
+        j = possibility &~(possibility-ONE)
+        while j != 0:
+            index = trailingZeros(j) 
+            move = {}
+            move['toString'] = "K"+makeField((iLoc//8),iLoc%8)+'-'+makeField((index//8),index%8)
+            moves.append(move)
+            possibility&=~j
+            j=possibility&~(possibility- ONE)
+        return moves
+    
+    def unsafeForBlack(self):
+        WP = self.WP
+        WN = self.WN
+        QB = self.WQ|self.WR
+        QR = self.WQ|self.WR
+        WK = self.WK
+
+        #pawn
+        unsafe = (WP>>np.uint64(7)) & ~FILE_A   #actually >>>
+        unsafe |= (WP>>np.uint64(9)) & ~FILE_H
         
+        #knight
+        i = WP &~(WP - ONE)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            if iLoc > 18:
+                possibility = KNIGHT_SPAN << np.uint64(iLoc - 18)
+            else:
+                possibility = KNIGHT_SPAN >> np.uint64(18 - iLoc)
+            if iLoc % 8 < 4:
+                possibility &= ~FILE_GH
+            else:
+                possibility &= ~FILE_AB
+            unsafe |= possibility
+            WN &=~i
+            i = WN & ~(WN-ONE)
+            
+        #(anti)diagonal sliding pieces (bishop & queen)
+        i = QB &~(QB-ONE)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            possibility = self.DAndAntiDMoves(iLoc)
+            unsafe |= possibility
+            QB&=~i
+            i=QB&~(QB-ONE)
+            
+        #staight sliding pieces (rook & queen)
+        i = QR &~(QR-ONE)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            possibility = self.HAndVMoves(iLoc)
+            unsafe |= possibility
+            QR&=~i
+            i=QR&~(QR-ONE)
+        
+        #king
+        iLoc = trailingZeros(WK)
+        if iLoc > 9:
+            possibility = KING_SPAN<<np.uint64(iLoc-9)
+        else:
+            possibility = KING_SPAN>>np.uint64(9 -iLoc)
+        if iLoc % 8 < 4:
+            possibility &=~FILE_GH
+        else:
+            possibility &=~FILE_AB
+        unsafe |= possibility
+        
+        return unsafe
   
 # //////////////////
 #
