@@ -1,5 +1,6 @@
 from moves import *
 import numpy as np
+from constants import *
 from utils import *
 import random
 
@@ -127,25 +128,25 @@ class Board:
         allPinned = np.uint64(0)
         allPinned = pinned(self,color,enemy)
         checkFilter = np.uint64((1<<64)-1)
-        attacker = inCheck(self,color,enemy,self.isWhite,self.all)
-        if attacker[1]:
-            checkFilter = attacker[0]
-            self.getKingMoves(color,enemy)
-        elif attacker[0]:
-            checkFilter = attacker[0]
-            self.getRookMoves(color,enemy,allPinned,checkFilter)
-            self.getBishopMoves(color,enemy,allPinned,checkFilter)
-            self.getPawnMoves(color,enemy,allPinned,checkFilter)
-            self.getKnightMoves(color,allPinned,checkFilter)
-            self.getKingMoves(color,enemy)
-            self.getQueenMoves(color,enemy,allPinned,checkFilter)
-        else:
-            self.getRookMoves(color,enemy,allPinned,checkFilter)
-            self.getBishopMoves(color,enemy,allPinned,checkFilter)
-            self.getPawnMoves(color,enemy,allPinned,checkFilter)
-            self.getKnightMoves(color,allPinned,checkFilter)
-            self.getKingMoves(color,enemy)
-            self.getQueenMoves(color,enemy,allPinned,checkFilter)
+        # attacker = inCheck(self,color,enemy,self.isWhite,self.all) #kompletter bullshit hier
+        # if attacker[1]:
+        #     checkFilter = attacker[0]
+        #     self.getKingMoves(color,enemy)
+        # elif attacker[0]:
+        #     checkFilter = attacker[0]
+        #     self.getRookMoves(color,enemy,allPinned,checkFilter)
+        #     self.getBishopMoves(color,enemy,allPinned,checkFilter)
+        #     self.getPawnMoves(color,enemy,allPinned,checkFilter)
+        #     self.getKnightMoves(color,allPinned,checkFilter)
+        #     self.getKingMoves(color,enemy)
+        #     self.getQueenMoves(color,enemy,allPinned,checkFilter)
+        # else:
+        self.getRookMoves(color,enemy,allPinned,checkFilter)
+        self.getBishopMoves(color,enemy,allPinned,checkFilter)
+        self.getPawnMoves(color,enemy,allPinned,checkFilter)
+        self.getKnightMoves(color,allPinned,checkFilter)
+        self.getKingMoves(color,enemy)
+        self.getQueenMoves(color,enemy,allPinned,checkFilter)
         return self.moves
        
     #berechnet alle PawnMoves
@@ -209,14 +210,40 @@ class Board:
 
     #berechnet alle RookMoves
     def getRookMoves(self,color,enemy,allPinned,checkFilter):
+        
+        formatBits(color, "Color")
+        formatBits(enemy, "Enemy")
+        formatBits(checkFilter, "Checkfilter")
+        print(allPinned, "allPinned")
+    
+        # formatBits(self.pieceList[1])
+        z = nonzeroElements(self.pieceList[1] & color)
+        for z2 in z:
+            formatBits(z2)
+        
         for n in nonzeroElements(self.pieceList[1] & color):
             pieceFieldNumber = np.max(toNumber(n))
+            print("pieceFieldNumber",pieceFieldNumber) 
+            
             possibleMoves = allMoves[2][pieceFieldNumber][1]
+            print("possibleMoves", possibleMoves)
+            
             colorShadowPieces = nonzeroElements(possibleMoves & color)
+            print("colorShadowPieces", colorShadowPieces)
+
             colorShadows = np.uint64(0)
             if np.any(colorShadowPieces):
                 colorShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(colorShadowPieces)])
+            formatBits(colorShadows, "colorShadows")
+            formatBits(np.bitwise_or.reduce(colorShadowPieces), "colorShadowpieces reduced")
+            formatBits( ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces)), "cShadow und cShadPiec NOT")
             newMoves = (possibleMoves & ~(colorShadows | np.bitwise_or.reduce(colorShadowPieces))) & checkFilter
+            
+            print(newMoves, "newMoves")
+            for m in newMoves:
+                if m != 0:
+                    print(square[m])
+
             if np.any(newMoves):
                 enemyShadowPieces = nonzeroElements(newMoves & enemy)
                 enemyShadows = np.uint64(0)
@@ -224,6 +251,7 @@ class Board:
                     enemyShadows = np.bitwise_or.reduce(allShadows[0][pieceFieldNumber][toNumber(enemyShadowPieces)])
                 newMoves &= ~enemyShadows
                 newMoves = nonzeroElements(newMoves)
+
                 if allPinned & n:
                         king = nonzeroElements(color & self.pieceList[5])
                         kingNumber = np.max(toNumber(king))
@@ -604,3 +632,16 @@ class Board:
 
     def getEntry(self):
         return self.ttable.get(self.getHash())
+    
+def formatBits(num, title=''):
+    print()
+    print(title)
+    print()
+    return print(insert_newlines('{:064b}'.format(num), 8))
+
+def insert_newlines(string, every=64):
+    return '\n'.join(string[i:i+every] for i in range(0, len(string), every))
+
+
+b = Board('rnbqkbnr/ppppppp1/8/7p/P7/8/1PPPPPPP/RNBQKBNR w KQkq - 0 1')
+b.getMoves()

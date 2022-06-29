@@ -2,7 +2,7 @@ from Board import *
 from utils import toFen, toNumber, movesToJSON2, alphaBetaMove
 
 # board  = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
-board  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
+board  = Board('rnbqkbnr/ppppppp1/8/7p/P7/8/1PPPPPPP/RNBQKBNR w - - 0 1')
 
 # TODO Bug
 def initBoard(fenString):

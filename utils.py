@@ -73,7 +73,7 @@ def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
 def inCheck(board, color: np.uint64, enemy: np.uint64, white: bool, all):
     kingN = nonzeroElements(board.pieceList[5] & color)
     result = 0
-    if attacked(board, enemy, white, kingN, all) > 0:
+    if attacked(board, enemy, white, kingN, all)[0] > 0:
         result = 1
     return result
 
@@ -155,12 +155,12 @@ def nonzeroElements(array: np.ndarray):
 def pinned(board, color: np.uint64, enemy: np.uint64):
     king = np.max(board.pieceList[5] & color)
     kNumber = toNumber(king)
-    attackers = np.append((allMoves[2][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[1])) & enemy), (allMoves[3][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[3])) & enemy))
+    # attackers = np.append((allMoves[2][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[1])) & enemy), (allMoves[3][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[3])) & enemy))
     pinned = np.uint64(0)
-    for n in nonzeroElements(attackers):
-        blockers = between[kNumber][toNumber(n)] & board.all
-        if popcount_zero(blockers) == 1:
-            pinned |= blockers & color
+    # for n in nonzeroElements(attackers):
+    #     blockers = between[kNumber][toNumber(n)] & board.all
+    #     if popcount_zero(blockers) == 1:
+    #         pinned |= blockers & color
     return pinned
 
 def getFigure(num):
@@ -325,8 +325,7 @@ def evalBoard(board):
         board.pieceList[3] & color).size - nonzeroElements(board.pieceList[3] & enemy).size
     queenDelta = nonzeroElements(
         board.pieceList[4] & color).size - nonzeroElements(board.pieceList[4] & enemy).size
-    check = (inCheck(board, enemy, color, not board.isWhite, board.all)[0] & ~np.uint64(0)) - \
-        (inCheck(board, color, enemy, board.isWhite, board.all)[0] & ~np.uint64(0))
+    check = inCheck(board, enemy, color, not board.isWhite, board.all) - inCheck(board, color, enemy, board.isWhite, board.all)
     result = 10 * check + 9 * queenDelta + 5 * rookDelta + 3 * knightDelta + 3 * bishopDelta + 1 * pawnDelta
     
     kingOfTheHill = isKingOfTheHill(board, color) - isKingOfTheHill(board, enemy)
