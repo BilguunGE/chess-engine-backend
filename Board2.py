@@ -3,12 +3,6 @@ import numpy as np
 from helpers import *
 
 
-def makeField(row, col):
-    colNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
-    rowNames = ["8", "7", "6", "5", "4", "3", "2", "1"]
-    return colNames[col] + rowNames[row]
-
-
 class Board:
     ZERO_STRING = "0000000000000000000000000000000000000000000000000000000000000000"
     FILE_A=np.uint64(72340172838076673)
@@ -62,8 +56,12 @@ class Board:
     BK = np.uint64(0)
     
 
-    NOT_WHITE_PIECES = np.uint64(0)
     BLACK_PIECES = np.uint64(0)
+    WHITE_PIECES = np.uint64(0)
+
+    MY_PIECES = np.uint64(0)
+    NOT_MY_PIECES =  np.uint64(0)
+
     EMPTY = np.uint64(0)
     OCCUPIED = np.uint64(0)
 
@@ -184,23 +182,39 @@ class Board:
         return newChessBoard
 
     def getMoves(self):
+        if self.isWhiteTurn:
+            return  self.possibleMovesW()
+        else:
+            return self.possibleMovesB()
+
+    def possibleMovesW(self):
+        #added BK to avoid illegal capture
+        self.NOT_MY_PIECES = ~(self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BK)
+        #omitted WK to avoid illegal capture
+        self.MY_PIECES = self.WP|self.WN|self.WB|self.WR|self.WQ
+        self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
+        self.EMPTY=~self.OCCUPIED
+        return self.getMovesP()+self.getMovesB(self.WB)+self.getMovesN(self.WN)+self.getMovesQ(self.WQ)+self.getMovesR(self.WR)
+
+        
+    
+    def possibleMovesB(self) :
+        #added WK to avoid illegal capture
+        self.NOT_MY_PIECES=~(self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK|self.WK)
+        #omitted BK to avoid illegal capture
+        self.MY_PIECES=self.BP|self.BN|self.BB|self.BR|self.BQ
+        self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
+        self.EMPTY=~self.OCCUPIED
+
+        return self.getMovesP()+self.getMovesB(self.BB)+self.getMovesN(self.BN)+self.getMovesQ(self.BQ)+self.getMovesR(self.BR)
+    
+    def getMovesP(self):
         # exluding black king, because he can't be eaten
         self.BLACK_PIECES = self.BP | self.BN | self.BB | self.BR | self.BQ
         
         # same here
         self.WHITE_PIECES = self.WP | self.WN | self.WB | self.WR | self.WQ
 
-        #added BK to avoid illegal capture
-        self.NOT_WHITE_PIECES = ~(self.WP | self.WN | self.WB | self.WR | self.WQ | self.WK | self.BK)
-
-        self.OCCUPIED = self.WP | self.WN | self.WB | self.WR | self.WQ | self.WK | self.BP | self.BN | self.BB | self.BR | self.BQ | self.BK
-
-        # board with empty fields
-        self.EMPTY= ~self.OCCUPIED
-
-        return self.getMovesWN()
-
-    def getMovesP(self):
         moves = []
         color = 1
         if not self.isWhiteTurn:
@@ -315,13 +329,12 @@ class Board:
         possibilitiesAntiDiagonal = ((self.OCCUPIED & self.AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * binaryS)) ^ reverse(reverse(self.OCCUPIED & self.AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * reverse(binaryS)))
         return (possibilitiesDiagonal & self.DiagonalMasks8[(s // 8) + (s % 8)]) | (possibilitiesAntiDiagonal & self.AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)])
     
-    def getMovesWB(self):
+    def getMovesB(self, B):
         moves = []
-        WB = self.WB
-        i = WB&~(WB - ONE)
+        i = B&~(B - ONE)
         while(i != 0):
             iLocation = trailingZeros(i)
-            possibility = self.DAndAntiDMoves(iLocation) & self.NOT_WHITE_PIECES
+            possibility = self.DAndAntiDMoves(iLocation) & self.NOT_MY_PIECES
             j = possibility & ~(possibility - ONE)
             while (j != 0):
                 move = {}
@@ -330,17 +343,16 @@ class Board:
                 moves.append(move)
                 possibility&=~j
                 j = possibility & ~(possibility - ONE)
-            WB &= ~i
-            i = WB&~(WB - ONE)
+            B &= ~i
+            i = B&~(B - ONE)
         return moves
     
-    def getMovesWR(self):
+    def getMovesR(self, R):
         moves = []
-        WR = self.WR
-        i = WR&~(WR - ONE)
+        i = R&~(R - ONE)
         while(i != 0):
             iLocation = trailingZeros(i)
-            possibility = self.HAndVMoves(iLocation) & self.NOT_WHITE_PIECES
+            possibility = self.HAndVMoves(iLocation) & self.NOT_MY_PIECES
             j = possibility & ~(possibility - ONE)
             while (j != 0):
                 move = {}
@@ -349,17 +361,16 @@ class Board:
                 moves.append(move)
                 possibility&=~j
                 j = possibility & ~(possibility - ONE)
-            WR &= ~i
-            i = WR&~(WR - ONE)
+            R &= ~i
+            i = R&~(R - ONE)
         return moves
     
-    def getMovesWQ(self):
+    def getMovesQ(self, Q):
         moves = []
-        WQ = self.WQ
-        i = WQ&~(WQ - ONE)
+        i = Q&~(Q - ONE)
         while(i != 0):
             iLocation = trailingZeros(i)
-            possibility = (self.DAndAntiDMoves(iLocation) | self.HAndVMoves(iLocation) )& self.NOT_WHITE_PIECES
+            possibility = (self.DAndAntiDMoves(iLocation) | self.HAndVMoves(iLocation) )& self.NOT_MY_PIECES
             j = possibility & ~(possibility - ONE)
             while (j != 0):
                 move = {}
@@ -368,18 +379,17 @@ class Board:
                 moves.append(move)
                 possibility&=~j
                 j = possibility & ~(possibility - ONE)
-            WQ &= ~i
-            i = WQ&~(WQ - ONE)
+            Q &= ~i
+            i = Q&~(Q - ONE)
         return moves
     
-    def getMovesWN(self):    
+    def getMovesN(self, N):    
         moves = []
-        WN = self.WN
-        i = WN &~(WN - ONE)
+        i = N &~(N - ONE)
         # printBits(self.WHITE_PIECES, "notwhite")
         # printBits(self.FILE_AB)
         # printBits(self.FILE_GH)
-        printBits(WN)
+        printBits(N)
         while i != 0:
             iLoc = trailingZeros(i) #loc of N
             if iLoc >  18:
@@ -389,9 +399,9 @@ class Board:
                 possibility = self.KNIGHT_SPAN >> np.uint64(18 - iLoc)
                 printBits(possibility,"<=18") 
             if iLoc%8 < 4:
-                possibility &= ~self.FILE_GH & self.NOT_WHITE_PIECES
+                possibility &= ~self.FILE_GH & self.NOT_MY_PIECES
             else:
-                possibility &= ~self.FILE_AB & self.NOT_WHITE_PIECES
+                possibility &= ~self.FILE_AB & self.NOT_MY_PIECES
             printBits(possibility,"nach if else")
             j = possibility &~(possibility-ONE)
             while j != 0:
@@ -401,8 +411,8 @@ class Board:
                 moves.append(move)
                 possibility&=~j
                 j=possibility&~(possibility- ONE)
-            WN &=~i
-            i = WN &~(WN - ONE)
+            N &=~i
+            i = N &~(N - ONE)
         return moves
         
   
@@ -412,5 +422,5 @@ class Board:
 #
 # ///////////////////
     
-b = Board('rnbqkbnr/p1p1p1pp/1p1p1p2/8/8/1PPQ2B1/1PP1PPPP/RNB1K1NR w KQkq - 0 1')
-print(b.getMoves())
+b = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1')
+print((b.getMoves()))
