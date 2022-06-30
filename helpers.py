@@ -34,6 +34,7 @@ def trailingZeros(s):
     s = np.binary_repr(s,width=64)
     return len(s) - len(s.rstrip('0'))
 
+# TODO needs to reflected horizontally
 def strBBtoBB(str):
     bbStr = str.replace("\n","").replace(" ","")
     return np.uint64(int(bbStr,2))
@@ -56,3 +57,7 @@ def reverse(s):
     s = np.binary_repr(s,width=64)
     return np.uint64(int(s[::-1], 2))
     
+def makeField(row, col):
+    colNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    rowNames = ["8", "7", "6", "5", "4", "3", "2", "1"]
+    return colNames[col] + rowNames[row]
