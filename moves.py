@@ -1,9 +1,13 @@
 import numpy as np
-
+import constants as c
 EMPTY = np.uint64(0)
+
 # moves -- 0 = blackPawns, 1 = whitePawns, 2 = Rooks, 3 = Bishops, 4 = Kings, 5 = Knights
+# moves -- 0 = blackPawnLike, 1 = whitePawnLike, 2 = straight, 3 = diagonal, 4 = KingLike, 5 = L
 def allMovesGen():
     moves = []
+    
+    # blackPawns TODO: remove first row moves since not possible
     x = 0
     movesH = []
     while x < 8:
@@ -29,6 +33,13 @@ def allMovesGen():
             y += 1
         x += 1
     moves.append(movesH)
+    
+    # print()
+    # print()
+    # print("Black Pawn Moves:")
+    # interpretPawnMoves(movesH)
+    
+    #white pawns TODO: remove first row moves since not possible
     x = 0
     movesH = []
     while x < 8:
@@ -54,6 +65,12 @@ def allMovesGen():
             y += 1
         x += 1
     moves.append(movesH)
+    
+    # print()
+    # print()
+    # print("White Pawn Moves:")
+    # interpretPawnMoves(movesH)
+    
     x = 0
     movesH = []
     while x < 8:
@@ -75,6 +92,12 @@ def allMovesGen():
             y += 1
         x += 1
     moves.append(movesH)
+    
+    # print()
+    # print()
+    # print("Rooks Moves:")
+    # interpretMoves(movesH)
+    
     movesH = []
     x = 0
     while x < 8:
@@ -114,6 +137,12 @@ def allMovesGen():
             y += 1
         x += 1
     moves.append(movesH)
+    
+    # print()
+    # print()
+    # print("Bishop Moves:")
+    # interpretMoves(movesH)
+    
     movesH = []
     x = 0
     while x < 8:
@@ -149,6 +178,13 @@ def allMovesGen():
             y += 1
         x += 1
     moves.append(movesH)
+    
+    # print()
+    # print()
+    # print("Kings Moves:")
+    # interpretMoves(movesH)
+    
+    #L moves
     movesH = []
     x = 0
     while x < 8:
@@ -156,6 +192,7 @@ def allMovesGen():
         while y < 8:
             newMoves = np.array(0,dtype=np.uint64)
             _newMoves_ = EMPTY
+            newMoves = np.array([],dtype=np.uint64)
             if x > 0 and y > 1:
                 newMoves = np.append(newMoves, np.uint64(1 << ((x-1)*8 + y-2)))
                 _newMoves_ |= np.uint64(1 << ((x-1)*8 + y-2))
@@ -184,10 +221,18 @@ def allMovesGen():
             y += 1
         x += 1
     moves.append(movesH)
+    
+    # print()
+    # print()
+    # print("Knights Moves:")
+    # interpretMoves(movesH)
+    
     return moves
+
 # shadows -- 0 = rooks, 1 = bishops 
 def allShadowsGen():
     shadows = []
+    
     x = 0
     shadowsH = []
     while x < 8:
@@ -230,6 +275,16 @@ def allShadowsGen():
             y += 1
         x += 1
     shadows.append(shadowsH)
+    
+    # for i in shadowsH:
+    #     result = ""
+    #     for i2 in i:
+    #         result += str(bin(i2)) + "  "
+    #     print()
+    #     print(result)
+          
+        
+    
     shadowsH = []
     x = 0
     while x < 8:
@@ -352,9 +407,38 @@ def betweenGen():
         x += 1
     return between
 
+def interpretPawnMoves(moves):
+    index = 0
+    for move in moves:
+        result = ''
+        if index % 8 == 0:
+            print()
+        result += c.square[move[0]] + " -> "
+        for n in move[1][0]:
+            result += c.square[n] +" "
+        result += "catch moves: "
+        for n in move[1][1]:
+            result += c.square[n] + " "
+        print(result)
+        index += 1
+
+def interpretMoves(moves):
+    index = 0
+    for move in moves:
+        result = ''
+        if index % 8 == 0:
+            print()
+        result += c.square[move[0]] + " -> "
+        for n in move[1]:
+            result += c.square[n] +" "
+        print(result)
+        index += 1
+    
+    
 ## alle möglichen Züge unterteilt in [Figur][Feld,Züge] wobei die Züge in np.array gespeichert werden
 allMoves = allMovesGen()
 ## die Schatten aller Feld1 X Feld2 Möglichkeiten unterteilt in [Figur][Feld1][Schatten nach Feld2] wobei die Schatten in uint Repräsentation vorliegen
 allShadows = allShadowsGen()
 ## alle Felder zwischen Feld1 und Feld unterteilt in [Feld1][Felder zwischen Feld1 unf Feld2] wobei die Felder in uint Repräsentation vorliegen
 between = betweenGen()
+

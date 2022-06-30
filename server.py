@@ -18,6 +18,11 @@ def initBoard():
 def getMoves():
     return route.getMoves()
 
+@app.route('/alphabeta', methods=['GET'])
+@cross_origin()
+def alphabeta():
+    return route.alphaBeta()
+
 
 @app.route('/doMove', methods=['POST'])
 @cross_origin()

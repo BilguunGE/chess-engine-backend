@@ -1,19 +1,23 @@
 from Board import *
-from utils import toFen, toNumber, movesToJSON2, iterativeDeepening
+from utils import toFen, toNumber, movesToJSON2, alphaBetaMove
 
-board  = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+# board  = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+board  = Board('rnbqkbnr/ppppppp1/8/7p/P7/8/1PPPPPPP/RNBQKBNR w - - 0 1')
 
+# TODO Bug
 def initBoard(fenString):
+    print("Executing initBoard")
     global board
     board = Board(fenString)
+    print("Initiated board: ", toFen(board), "("+fenString+")")
+    print(board.getMoves())
     return getMoves()
 
 def getMoves():
-    result = []
-    #iterativeDeepening(500, board, -10000, 10000, False, result)
-    alphabeta(board, 3, -10000, 10000, True, True, result)
-    print(toFen(board))
-    return movesToJSON2(result)
+    return movesToJSON(board.getMoves())
+
+def alphaBeta():
+    return { "result" : alphaBetaMove(board, 6, -10000, 10000) }
 
 def testMoves():
     b = board
@@ -24,6 +28,7 @@ def testMoves():
     return {'test':'ok'}
 
 def doMove(move):
+    print("Executing doMove")
     fromField= toNumber(move['fromField'])
     toField= toNumber(move['toField'])
     figure = toNumber(move['figure'])
