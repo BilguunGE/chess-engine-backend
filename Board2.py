@@ -2,6 +2,7 @@ import re
 import numpy as np
 from helpers import *
 from constants import *
+from copy import copy
 
 
 class Board:
@@ -160,8 +161,8 @@ class Board:
         self.MY_PIECES = self.WP|self.WN|self.WB|self.WR|self.WQ
         self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
         self.EMPTY=~self.OCCUPIED
-        # return self.getMovesP()+self.getMovesB(self.WB)+self.getMovesN(self.WN)+self.getMovesQ(self.WQ)+self.getMovesR(self.WR)
-        return self.getMovesK(self.WK)
+        #return self.getMovesP()+self.getMovesB(self.WB)+self.getMovesN(self.WN)+self.getMovesQ(self.WQ)+self.getMovesR(self.WR)
+        return self.getMovesP()
 
         
     
@@ -172,8 +173,8 @@ class Board:
         self.MY_PIECES=self.BP|self.BN|self.BB|self.BR|self.BQ
         self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
         self.EMPTY=~self.OCCUPIED
-        # return self.getMovesP()+self.getMovesB(self.BB)+self.getMovesN(self.BN)+self.getMovesQ(self.BQ)+self.getMovesR(self.BR)
-        return self.getMovesK(self.BK)
+        #return self.getMovesP()+self.getMovesB(self.BB)+self.getMovesN(self.BN)+self.getMovesQ(self.BQ)+self.getMovesR(self.BR)
+        return self.getMovesP()
 
     
     def getMovesP(self):
@@ -189,67 +190,94 @@ class Board:
             color = -1
 
         # beat right
-        PAWN_MOVES = (self.WP >> np.uint64(7)) & self.BLACK_PIECES & ~RANK_8 & ~ FILE_A
+        PAWN_MOVES = (self.WP >> np.uint64(7)) & self.BLACK_PIECES & ~FILE_A
         PAWN_MOVES_PROMO = (self.WP >> np.uint64(7)) & self.BLACK_PIECES & RANK_8 & ~FILE_A
 
         if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << np.uint64(7)) & self.WHITE_PIECES & ~RANK_1 & ~ FILE_H
+            PAWN_MOVES = (self.BP << np.uint64(7)) & self.WHITE_PIECES  &~ FILE_H
             PAWN_MOVES_PROMO = (self.BP << np.uint64(7)) & self.WHITE_PIECES & RANK_1 & ~FILE_H
-
+        
         for i in range(64):
+            isPromo = False 
             move = {}
             if (PAWN_MOVES_PROMO >> np.uint64(i)) & ONE == ONE:
                 move['isPromo'] = True
+                move['isWhite'] = self.isWhiteTurn
+                isPromo = True
             if (PAWN_MOVES >> np.uint64(i)) & ONE  == ONE :
                 move['toString'] = makeField((i//8)+(color*1), (i % 8)-(color*1)) + "x" + makeField((i//8), i % 8)
-                move['isHit'] = True
-                moves.append(move)
+                move['from'] = ((i//8)+(color*1),(i % 8)-(color*1))
+                move['to'] = ((i//8), i % 8)
+                move['isPawn'] = True
+                if isPromo:
+                    self.promoHelper(move, moves)
+                else:
+                    moves.append(move)
 
         # beat left
-        PAWN_MOVES = (self.WP >> np.uint64(9)) & self.BLACK_PIECES & ~RANK_8 & ~ FILE_H
+        PAWN_MOVES = (self.WP >> np.uint64(9)) & self.BLACK_PIECES  & ~ FILE_H
         PAWN_MOVES_PROMO = (self.WP >> np.uint64(9)) & self.BLACK_PIECES & RANK_8 & ~FILE_H
 
         if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << np.uint64(9)) & self.WHITE_PIECES & ~RANK_1 & ~ FILE_A
+            PAWN_MOVES = (self.BP << np.uint64(9)) & self.WHITE_PIECES  & ~ FILE_A
             PAWN_MOVES_PROMO = (self.BP << np.uint64(9)) & self.WHITE_PIECES & RANK_1 & ~FILE_A
 
         for i in range(64):
             move = {}
+            isPromo = False
             if (PAWN_MOVES_PROMO >> np.uint64(i)) & ONE == ONE:
                 move['isPromo'] = True
+                move['isWhite'] = self.isWhiteTurn
+                isPromo = True
             if (PAWN_MOVES >> np.uint64(i)) & ONE == ONE:
-                move['toString'] = makeField((i//8)+(color*1), (i % 8)-(color*1)) + "x"+makeField((i//8), i % 8)
-                move['isHit'] = True
-                moves.append(move)
+                move['toString'] = makeField((i//8)+(color*1), (i % 8)+(color*1)) + "x"+makeField((i//8), i % 8)
+                move['from'] =((i//8)+(color*1), (i % 8)-(color*1)) 
+                move['to'] = ((i//8), i % 8)
+                move['isPawn'] = True
+                if isPromo:
+                    self.promoHelper(move, moves)
+                else:
+                    moves.append(move)
 
         # move 1 forward
-        PAWN_MOVES = (self.WP >> np.uint64(8)) & self.EMPTY & ~RANK_8
+        PAWN_MOVES = (self.WP >> np.uint64(8)) & self.EMPTY 
         PAWN_MOVES_PROMO = (self.WP >> np.uint64(8)) & self.EMPTY & RANK_8
 
         if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << np.uint64(8)) & self.EMPTY & ~RANK_1
+            PAWN_MOVES = (self.BP << np.uint64(8)) & self.EMPTY
             PAWN_MOVES_PROMO = (self.BP << np.uint64(8)) & self.EMPTY & RANK_1
 
         for i in range(64):
             move = {}
+            isPromo = False
             if (PAWN_MOVES_PROMO >> np.uint64(i)) & ONE == ONE:
                 move['isPromo'] = True
+                move['isWhite'] = self.isWhiteTurn
+                isPromo = True
             if (PAWN_MOVES >> np.uint64(i)) & ONE == ONE:
                 move['toString'] = makeField((i//8)+(color*1), (i % 8)) + "-"+makeField((i//8), i % 8)
-                move['isHit'] = False
-                moves.append(move)
+                move['from'] = ((i//8)+(color*1), (i % 8))
+                move['to'] = ((i//8), i % 8)
+                move['isPawn'] = True
+                if isPromo:
+                    self.promoHelper(move, moves)
+                else:
+                    moves.append(move)
 
         # move 2 forward
-        PAWN_MOVES = (self.WP >> np.uint64(16)) & self.EMPTY & (self.EMPTY >> np.uint64(8)) & RANK_4
+        PAWN_MOVES = (self.WP >> np.uint64(16)) & self.EMPTY & RANK_4
     
         if not self.isWhiteTurn:
-            PAWN_MOVES = (self.BP << np.uint64(16)) & self.EMPTY & (self.EMPTY << np.uint64(8)) & RANK_5
+            PAWN_MOVES = (self.BP << np.uint64(16)) & self.EMPTY & RANK_5
 
         for i in range(64):
             move = {}
             if (PAWN_MOVES >> np.uint64(i)) & ONE == ONE:
                 move['toString'] = makeField((i//8)+(color*2), (i % 8)) + "-"+makeField((i//8), i % 8)
-                move['isHit'] = False
+                move['from'] = ((i//8)+(color*2), (i % 8))
+                move['to'] = ((i//8), i % 8)
+                move['double'] = True
+                move['isPawn'] = True
                 moves.append(move)
 
         if self.enPassant != '-':
@@ -264,9 +292,13 @@ class Board:
             for i in range(64):
                 move = {}
                 if (PAWN_MOVES >> np.uint64(i)) & ONE == ONE:
-                    move['toString'] = makeField((i//8), i % 8-(color*1))+'x'+self.enPassant
-                    move['isHit'] = True
+                    move['toString'] = makeField((i//8), i % 8-(color*1))+'x'+makeField((i//8)-(color*1), i % 8)
+                    move['from'] = ((i//8), i % 8-(color*1))
+                    move['to'] = ((i//8)-(color*1), i % 8)
+                    move['isPawn'] = True
                     move['enPassant'] = True
+                    move['isWhite'] = self.isWhiteTurn
+
                     moves.append(move)
 
             # en passant left
@@ -278,12 +310,44 @@ class Board:
             for i in range(64):
                 move = {}
                 if (PAWN_MOVES >> np.uint64(i)) & ONE == ONE:
-                    move['toString'] = makeField((i//8), i % 8+(color*1))+'x'+self.enPassant
-                    move['isHit'] = True
+                    move['toString'] = makeField((i//8), i % 8+(color*1))+'x'+ makeField((i//8) -(color*1), i % 8)
+                    move['from'] = ((i//8), i % 8+(color*1))
+                    move['to'] = ((i//8) -(color*1), i % 8)
+                    move['isPawn'] = True
                     move['enPassant'] = True
+                    move['isWhite'] = self.isWhiteTurn
+
                     moves.append(move)
 
         return moves
+    
+    def promoHelper(self,move, moves):
+        if self.isWhiteTurn:
+            moveR = copy(move)
+            moveR['promoType'] = 'R'
+            moves.append(moveR)
+            moveQ = copy(move)
+            moveQ['promoType'] = 'Q'
+            moves.append(moveQ)
+            moveB = copy(move)
+            moveB['promoType'] = 'B'
+            moves.append(moveB)
+            moveN = copy(move)
+            moveN['promoType'] = 'N'
+            moves.append(moveN)
+        else:
+            moveR = copy(move)
+            moveR['promoType'] = 'r'
+            moves.append(moveR)
+            moveQ = copy(move)
+            moveQ['promoType'] = 'q'
+            moves.append(moveQ)
+            moveB = copy(move)
+            moveB['promoType'] = 'b'
+            moves.append(moveB)
+            moveN = copy(move)
+            moveN['promoType'] = 'n'
+            moves.append(moveN)
 
     def HAndVMoves(self, s):
         binaryS = ONE << np.uint64(s)
@@ -308,6 +372,9 @@ class Board:
                 move = {}
                 index = trailingZeros(j)
                 move['toString'] = "B"+makeField((iLocation//8),iLocation%8)+'-'+makeField((index//8),index%8)
+                move['from'] = ((iLocation//8),iLocation%8)
+                move['to'] = ((index//8),index%8)
+                move['isPawn'] = False
                 moves.append(move)
                 possibility&=~j
                 j = possibility & ~(possibility - ONE)
@@ -326,6 +393,9 @@ class Board:
                 move = {}
                 index = trailingZeros(j)
                 move['toString'] = "R"+makeField((iLocation//8),iLocation%8)+'-'+makeField((index//8),index%8)
+                move['from'] = ((iLocation//8),iLocation%8)
+                move['to'] = ((index//8),index%8)
+                move['isPawn'] = False
                 moves.append(move)
                 possibility&=~j
                 j = possibility & ~(possibility - ONE)
@@ -344,6 +414,9 @@ class Board:
                 move = {}
                 index = trailingZeros(j)
                 move['toString'] = "Q"+makeField((iLocation//8),iLocation%8)+'-'+makeField((index//8),index%8)
+                move['from'] = ((iLocation//8),iLocation%8)
+                move['to'] = ((index//8),index%8)
+                move['isPawn'] = False
                 moves.append(move)
                 possibility&=~j
                 j = possibility & ~(possibility - ONE)
@@ -369,6 +442,9 @@ class Board:
                 index = trailingZeros(j) 
                 move = {}
                 move['toString'] = "N"+makeField((iLoc//8),iLoc%8)+'-'+makeField((index//8),index%8)
+                move['from'] = ((iLoc//8),iLoc%8)
+                move['to'] = ((index//8),index%8)
+                move['isPawn'] = False
                 moves.append(move)
                 possibility&=~j
                 j=possibility&~(possibility- ONE)
@@ -395,6 +471,9 @@ class Board:
                 index = trailingZeros(j) 
                 move = {}
                 move['toString'] = "K"+makeField((iLoc//8),iLoc%8)+'-'+makeField((index//8),index%8)
+                move['from'] = ((iLoc//8),iLoc%8)
+                move['to'] = ((index//8),index%8)
+                move['isPawn'] = False
                 moves.append(move)
             possibility&=~j
             j=possibility&~(possibility- ONE)
@@ -502,6 +581,49 @@ class Board:
         unsafe |= possibility
         
         return unsafe
+
+    def makeMove(self, board, move, type) :
+        #'regular' move
+        if(getattr(move, 'isPromo', False) and getattr(move, 'enPassant', False)):
+            start=np.uint64((move['from'][0]*8)+move["from"][1])
+            end=np.uint64((move['to'][0]*8)+move['to'][1])
+            if (((board>>start)&ONE)==ONE):
+                board&=~(ONE<<start)
+                board|=(ONE<<end)
+            else :
+                board&=~(ONE<<end)
+        #pawn promotion
+        elif (move['isPromo']):
+            if (move['isWhite']):
+                start=np.uint64(trailingZeros(FileMasks82[move['from'][0] + move['from'][1]]&RankMasks8[7]))
+                end=np.uint64(trailingZeros(FileMasks82[move['to'][0] + move['to'][1]]&RankMasks8[6]))
+            else:
+                start=np.uint64(trailingZeros(FileMasks82[move['from'][0] + move['from'][1]]&RankMasks8[6]))
+                end=np.uint64(trailingZeros(FileMasks82[move['to'][0] + move['to'][1]]&RankMasks8[7]))
+            
+            if (type==move['promoType']):
+                board|=(ONE<<end) 
+            else:
+                board&=~(ONE<<start)
+                board&=~(ONE<<end)
+        #en passant
+        elif (move['enPassant']):
+            if (move['isWhite']):
+                start=np.uint64(trailingZeros(FileMasks82[move['from'][0] + move['from'][1]]&RankMasks8[3]))
+                end=np.uint64(trailingZeros(FileMasks82[move['to'][0] + move['to'][1]]&RankMasks8[2]))
+                board&=~(FileMasks82[move['to'][0] + move['to'][1]]&RankMasks8[3])
+            else:
+                start=np.uint64(trailingZeros(FileMasks82[move['from'][0] + move['from'][1]]&RankMasks8[4]))
+                end=np.uint64(trailingZeros(FileMasks82[move['to'][0] + move['to'][1]]&RankMasks8[5]))
+                board&=~(FileMasks82[move['to'][0] + move['to'][1]]&RankMasks8[4])
+            
+            if (((board>>start)&ONE)==ONE):
+                board&=~(ONE<<start)
+                board|=(ONE<<end)
+        else :
+            print("ERROR: Invalid move type")
+        
+        return board
   
 # //////////////////
 #
@@ -509,5 +631,5 @@ class Board:
 #
 # ///////////////////
     
-b = Board('8/4R3/1k6/8/8/5r2/1K6/8 b - - 0 1')
+b = Board('rnbqkbnr/p6p/1p4p1/2p5/3p1p2/4p3/PPPPPPPP/RNBQKBNR b KQkq - 0 1')
 print((b.getMoves()))
