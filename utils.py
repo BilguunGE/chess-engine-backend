@@ -4,7 +4,7 @@ from moves import *
 import time
 from copy import deepcopy
 
-
+#gibt die Stringrepresentation eines spezifischen aktivierten Bits zurück Bsp: 1 --> A8
 def fieldToString(field: np.uint64):
     field = np.ceil(np.log2(field)).astype(int)
     y = field%8
@@ -12,6 +12,7 @@ def fieldToString(field: np.uint64):
     txt = 'abcdefgh'[int(y)] + '12345678'[int(7-x)]
     return txt
 
+#gibt für die Nummer den spezifischen Spielsteintyp zurück
 def numberToPiece(number):
     if number == 0:
         return 'Pawn'
@@ -27,45 +28,56 @@ def numberToPiece(number):
         return 'King'
     return '-'
 
+#gibt die Nummer des Spielfeldes zurück welches dem Exponenten der Bitrepräsentation entspricht Bsp: B8 = 2 = 2^1 = 0x10 --> 1
 def toNumber(field: Union[np.ndarray, np.uint64]) -> Union[np.ndarray, np.uint64]:
     field = np.ceil(np.log2(field)).astype(int)
     return field
 
+#gibt die Position aller gesetzten Bits als Builder Objekt zurück über das man iterieren kann Bsp: 3 = 0x11 --> 0 und 1
 def bits(n):
     while n:
         b = n & (~n+np.uint(1))
         yield toNumber(b)
         n ^= b
 
+#Gibt ein Tuple zurück wobei der erste Eintrag die attackierten Felder angibt und der Zweit angibt ob es mehrere attackierende Figuren gibt
 def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
     if not np.any(field):
         print(toFen(board))
-        return np.uint64(0)
+        return (np.uint64(0), False)
     field = np.max(toNumber(field))
     if (enemy & board.pieceBitboards[2] & allMoves[5][field][2]):
-        return (enemy & board.pieceBitboards[2] & allMoves[5][field][2])
+        return ((enemy & board.pieceBitboards[2] & allMoves[5][field][2]), False)
     if (enemy & board.pieceBitboards[5] & allMoves[4][field][2]):
-        return (enemy & board.pieceBitboards[5] & allMoves[4][field][2])
+        return ((enemy & board.pieceBitboards[5] & allMoves[4][field][2]), False)
     if white and (enemy & board.pieceBitboards[0] & allMoves[1][field][2][1]):
-        return (enemy & board.pieceBitboards[0] & allMoves[1][field][2][1])
+        return ((enemy & board.pieceBitboards[0] & allMoves[1][field][2][1]), False)
     if not white and (enemy & board.pieceBitboards[0] & allMoves[0][field][2][1]):
-        return (enemy & board.pieceBitboards[0] & allMoves[0][field][2][1])
+        return ((enemy & board.pieceBitboards[0] & allMoves[0][field][2][1]),False)
     attackerPieces = np.append((allMoves[2][field][1] & (board.pieceBitboards[4] | board.pieceBitboards[1]) & enemy), (allMoves[3][field][1] & (board.pieceBitboards[4] | board.pieceBitboards[3]) & enemy))
     if np.any(attackerPieces):
+        attackers = np.uint64(0)
+        attackersNumber = 0
         for n in nonzeroElements(attackerPieces):
             blockers = between[field][toNumber(n)] & all
             if not blockers:
-                return (between[field][toNumber(n)] | n)
-    return np.uint64(0)
+                attackersNumber += 1
+                attackers |= between[field][toNumber(n)] | n
+        if attackersNumber == 2:
+            return (attackers,True)
+        else: 
+            return (attackers,False)
+    return (np.uint64(0),False)
 
-
+#gibt zurück auf welche Felder Figuren ziehen können welche den König angreifen. Falls er nicht im Schach steht --> 0
 def inCheck(board, color: np.uint64, enemy: np.uint64, white: bool, all):
     kingN = nonzeroElements(board.pieceList[5] & color)
     result = 0
-    if attacked(board, enemy, white, kingN, all) > 0:
+    if attacked(board, enemy, white, kingN, all)[0] > 0:
         result = 1
     return result
 
+#returned den Fen der Boardinstanz
 def toFen(board):
     boardTxt = ['-']*64
     for n in board.pieceList[0]:
@@ -135,18 +147,20 @@ def toFen(board):
     fen += str(board.halfmove) + ' ' + str(board.fullmove)
     return fen
 
+#gibt alle Elemente eines Numpyarrays zurück die nicht null sind
 def nonzeroElements(array: np.ndarray):
     return array[np.nonzero(array)]
 
+#gibt Bitboard aller Pieces zurück die zwischen dem König und einem gegnerischen Bishop Rook oder Queen stehen ohne das eine andere Figure dazwischen steht
 def pinned(board, color: np.uint64, enemy: np.uint64):
     king = np.max(board.pieceList[5] & color)
     kNumber = toNumber(king)
-    attackers = np.append((allMoves[2][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[1])) & enemy), (allMoves[3][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[3])) & enemy))
+    # attackers = np.append((allMoves[2][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[1])) & enemy), (allMoves[3][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[3])) & enemy))
     pinned = np.uint64(0)
-    for n in nonzeroElements(attackers):
-        blockers = between[kNumber][toNumber(n)] & board.all
-        if popcount_zero(blockers) == 1:
-            pinned |= blockers & color
+    # for n in nonzeroElements(attackers):
+    #     blockers = between[kNumber][toNumber(n)] & board.all
+    #     if popcount_zero(blockers) == 1:
+    #         pinned |= blockers & color
     return pinned
 
 def getFigure(num):
@@ -182,7 +196,7 @@ def isMate(board):
     else:
         enemy = board.white
         color = board.black
-    return (board.moves == [] and inCheck(board, color, enemy, board.isWhite, board.all))
+    return (board.moves == [] and inCheck(board, color, enemy, board.isWhite, board.all)[0])
 
 def isRemis(board):
     if board.isWhite:
@@ -228,17 +242,22 @@ def iterativeDeepening(timeLimit, board, alpha, beta, maximizingPlayer, list):
 def minimax(board, depth, maximizingPlayer):
     if depth == 0 or isGameDone(board):
         value = evalBoard(board)
-        board.undoAllMoves()
         return value
     if maximizingPlayer:
         value = float('-inf')
-        for child in board.getMoves():
+        moves = board.getMoves()
+        for child in moves:
             value = max(value, minimax(board.doMove(child), depth-1, False))
+            move = board.moveHistoryAB.pop()
+            board.undoMove(move)
         return value
     else:
         value = float('inf')
-        for child in board.getMoves():
+        moves = board.getMoves()
+        for child in moves:
             value = min(value, minimax(board.doMove(child), depth-1, True))
+            move = board.moveHistoryAB.pop()
+            board.undoMove(move)
         return value
 
 def alphaBetaMove(board, depth, alpha, beta):
@@ -306,8 +325,7 @@ def evalBoard(board):
         board.pieceList[3] & color).size - nonzeroElements(board.pieceList[3] & enemy).size
     queenDelta = nonzeroElements(
         board.pieceList[4] & color).size - nonzeroElements(board.pieceList[4] & enemy).size
-    check = inCheck(board, enemy, color, not board.isWhite, board.all) - \
-        inCheck(board, color, enemy, board.isWhite, board.all)
+    check = inCheck(board, enemy, color, not board.isWhite, board.all) - inCheck(board, color, enemy, board.isWhite, board.all)
     result = 10 * check + 9 * queenDelta + 5 * rookDelta + 3 * knightDelta + 3 * bishopDelta + 1 * pawnDelta
     
     kingOfTheHill = isKingOfTheHill(board, color) - isKingOfTheHill(board, enemy)
@@ -320,6 +338,7 @@ def evalBoard(board):
     # if isKingOfTheHill(board) or isMate(board):
     #     result = factor * 10000
     return result
+
 
 def moveToObject(move):
     object = {}
