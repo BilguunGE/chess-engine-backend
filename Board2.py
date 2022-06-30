@@ -1,5 +1,4 @@
 import re
-from tkinter import ON
 import numpy as np
 from helpers import *
 from constants import *
@@ -32,6 +31,7 @@ class Board:
 
     isWhiteTurn = True
     castleRight = "KQkq"
+    castleRight2 = [True,True,True,True]
     enPassant = "-"
     halfmoveClock = 0
     fullmoveCount = 1
@@ -57,6 +57,7 @@ class Board:
             self.chessBoard = self.parseFEN(splittedFEN[0])
             self.isWhiteTurn = splittedFEN[1] == "w"
             self.castleRight = splittedFEN[2]
+            self.castleRight2 = castleStrToArr(splittedFEN[2])
             self.enPassant = splittedFEN[3]
             self.halfmoveClock = int(splittedFEN[4])
             self.fullmoveCount = int(splittedFEN[5])
@@ -74,6 +75,7 @@ class Board:
                     rowContent.append(cell)
             board.append(rowContent)
         return board
+        
 
     def convertArraysToBitboards(self):
         for i in range(64):
@@ -158,7 +160,8 @@ class Board:
         self.MY_PIECES = self.WP|self.WN|self.WB|self.WR|self.WQ
         self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
         self.EMPTY=~self.OCCUPIED
-        return self.getMovesP()+self.getMovesB(self.WB)+self.getMovesN(self.WN)+self.getMovesQ(self.WQ)+self.getMovesR(self.WR)
+        # return self.getMovesP()+self.getMovesB(self.WB)+self.getMovesN(self.WN)+self.getMovesQ(self.WQ)+self.getMovesR(self.WR)
+        return self.getMovesK(self.WK)
 
         
     
@@ -169,8 +172,9 @@ class Board:
         self.MY_PIECES=self.BP|self.BN|self.BB|self.BR|self.BQ
         self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
         self.EMPTY=~self.OCCUPIED
+        # return self.getMovesP()+self.getMovesB(self.BB)+self.getMovesN(self.BN)+self.getMovesQ(self.BQ)+self.getMovesR(self.BR)
+        return self.getMovesK(self.BK)
 
-        return self.getMovesP()+self.getMovesB(self.BB)+self.getMovesN(self.BN)+self.getMovesQ(self.BQ)+self.getMovesR(self.BR)
     
     def getMovesP(self):
         # exluding black king, because he can't be eaten
@@ -351,7 +355,7 @@ class Board:
         moves = []
         i = N &~(N - ONE)
         while i != 0:
-            iLoc = trailingZeros(i) #loc of N
+            iLoc = trailingZeros(i)
             if iLoc >  18:
                 possibility = KNIGHT_SPAN << np.uint64(iLoc-18)
             else:
@@ -374,6 +378,7 @@ class Board:
     
     def getMovesK(self, K):
         moves = []
+        isWhiteKing = K & self.WK > 0 
         iLoc = trailingZeros(K)
         if iLoc >  9:
             possibility = KING_SPAN << np.uint64(iLoc-9)
@@ -384,43 +389,71 @@ class Board:
         else:
             possibility &= ~FILE_AB & self.NOT_MY_PIECES
         j = possibility &~(possibility-ONE)
+        safe = ~self.unsafeFor(isWhiteKing)
         while j != 0:
-            index = trailingZeros(j) 
-            move = {}
-            move['toString'] = "K"+makeField((iLoc//8),iLoc%8)+'-'+makeField((index//8),index%8)
-            moves.append(move)
+            if j & safe != 0: #filters out unsafe fields
+                index = trailingZeros(j) 
+                move = {}
+                move['toString'] = "K"+makeField((iLoc//8),iLoc%8)+'-'+makeField((index//8),index%8)
+                moves.append(move)
             possibility&=~j
             j=possibility&~(possibility- ONE)
         return moves
     
-    def unsafeFor(self, isForBlack):
+    # TODO Feldern zwischen rochierenden Turm und König müssen leer sein
+    # TODO König darf nicht im Schach sein
+    # TODO Zielfeld des königs und weg des könig nicht dürfen nicht angegriffen sein
+    def getCastleFor(self, isForWhite):
+        if isForWhite:
+            shift = 0
+            R = self.WR
+            row = 0
+        else:
+            shift = 2
+            R = self.BR
+            row = 7
+        moves=[]
+        if self.castleRight2[0+shift] and ((ONE<<np.uint64(CASTLE_ROOKS[0+shift])) & R)!=0:
+            moves.append({
+                'toString':'K'+makeField(row,4)+'-'+makeField(row,6),
+                'isHit': False
+            })
+        if self.castleRight2[1+shift] and ((ONE<<np.uint64(CASTLE_ROOKS[1+shift])) & R)!=0:
+            moves.append({
+                'toString':'K'+makeField(row,4)+'-'+makeField(row,2),
+                'isHit': False
+            })
+        return moves
+        
+    
+    def unsafeFor(self, isForWhite):
         """
-        Generates a bitboard with all fields that would put the King of the color set through `isFormBlack` in check/danger.
+        Generates a bitboard with all fields that would put the King of the color set through `isFormWhite` in check/danger.
 
         Args:
-            `isForBlack` (bool): if `True` bitboard shows fields that are not safe for black pieces, if `False` then same for white 
+            `isForWhite` (bool): if `True` bitboard shows fields that are not safe for white pieces, if `False` then same for black 
 
         Returns:
             bitboard with unsafe fields for given color
         """
-        if isForBlack:
-            P = self.WP
-            N = self.WN
-            QB = self.WQ|self.WR
-            QR = self.WQ|self.WR
-            K = self.WK
-            #pawn
-            unsafe = (P>>np.uint64(7)) & ~FILE_A 
-            unsafe |= (P>>np.uint64(9)) & ~FILE_H
-        else:
+        if isForWhite:
             P = self.BP
             N = self.BN
-            QB = self.BQ|self.BR
+            QB = self.BQ|self.BB
             QR = self.BQ|self.BR
             K = self.BK
-            #pawn
+            #black pawn
             unsafe = (P<<np.uint64(7)) & ~FILE_H 
             unsafe |= (P<<np.uint64(9)) & ~FILE_A
+        else:
+            P = self.WP
+            N = self.WN
+            QB = self.WQ|self.WB
+            QR = self.WQ|self.WR
+            K = self.WK
+            #white pawn
+            unsafe = (P>>np.uint64(7)) & ~FILE_A 
+            unsafe |= (P>>np.uint64(9)) & ~FILE_H
         
         #knight
         i = N &~(N - ONE)
@@ -476,5 +509,5 @@ class Board:
 #
 # ///////////////////
     
-b = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+b = Board('8/4R3/1k6/8/8/5r2/1K6/8 b - - 0 1')
 print((b.getMoves()))

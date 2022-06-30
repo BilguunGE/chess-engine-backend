@@ -34,7 +34,6 @@ def trailingZeros(s):
     s = np.binary_repr(s,width=64)
     return len(s) - len(s.rstrip('0'))
 
-# TODO needs to reflected horizontally
 def strBBtoBB(str):
     bbStr = str.replace("\n","").replace(" ","")
     return np.uint64(int(bbStr,2))
@@ -49,7 +48,8 @@ def printBits(num, title=''):
 def insert_newlines(string, every=64):
     lines = []
     for i in range(0, len(string), every):
-        lines.append(string[i:i+every])
+        newLine = string[i:i+every]
+        lines.append(newLine[::-1])
     lines.reverse()
     return '\n'.join(lines)
 
@@ -61,3 +61,16 @@ def makeField(row, col):
     colNames = ["a", "b", "c", "d", "e", "f", "g", "h"]
     rowNames = ["8", "7", "6", "5", "4", "3", "2", "1"]
     return colNames[col] + rowNames[row]
+
+def castleStrToArr(str):
+    result = [False,False,False,False]
+    for s in str:
+        if s == "K":
+            result[0] = True
+        if s == "Q":
+            result[1] = True
+        if s == "k":
+            result[2] = True
+        if s == "q":
+            result[3] = True
+    return result
