@@ -160,8 +160,7 @@ class Board:
         self.MY_PIECES = self.WP|self.WN|self.WB|self.WR|self.WQ
         self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
         self.EMPTY=~self.OCCUPIED
-        # return self.getMovesP()+self.getMovesB(self.WB)+self.getMovesN(self.WN)+self.getMovesQ(self.WQ)+self.getMovesR(self.WR)
-        return self.getMovesK(self.WK)
+        return self.getMovesP()+self.getMovesB(self.WB)+self.getMovesN(self.WN)+self.getMovesQ(self.WQ)+self.getMovesR(self.WR)+self.getMovesK(self.WK)
 
         
     
@@ -172,8 +171,7 @@ class Board:
         self.MY_PIECES=self.BP|self.BN|self.BB|self.BR|self.BQ
         self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
         self.EMPTY=~self.OCCUPIED
-        # return self.getMovesP()+self.getMovesB(self.BB)+self.getMovesN(self.BN)+self.getMovesQ(self.BQ)+self.getMovesR(self.BR)
-        return self.getMovesK(self.BK)
+        return self.getMovesP()+self.getMovesB(self.BB)+self.getMovesN(self.BN)+self.getMovesQ(self.BQ)+self.getMovesR(self.BR)+self.getMovesK(self.BK)
 
     
     def getMovesP(self):
@@ -509,5 +507,5 @@ class Board:
 #
 # ///////////////////
     
-b = Board('8/4R3/1k6/8/8/5r2/1K6/8 b - - 0 1')
+b = Board('8/8/1k6/4b3/8/8/1N6/K7 w - - 0 1')
 print((b.getMoves()))
