@@ -1,4 +1,6 @@
 import numpy as np
+
+EMPTY = np.uint64(0)
 # moves -- 0 = blackPawns, 1 = whitePawns, 2 = Rooks, 3 = Bishops, 4 = Kings, 5 = Knights
 def allMovesGen():
     moves = []
@@ -9,8 +11,8 @@ def allMovesGen():
         while y < 8:
             newMoves = np.array([],dtype=np.uint64)
             possibleCatches = np.array([],dtype=np.uint64)
-            _newMoves_ = np.uint64(0)
-            _possibleCatches_ = np.uint64(0)
+            _newMoves_ = EMPTY
+            _possibleCatches_ = EMPTY
             if x == 1:
                 newMoves = np.append(newMoves, np.uint64(1 << ((x+2)*8+y)))
                 _newMoves_ |= np.uint64(1 << ((x+2)*8+y))
@@ -34,8 +36,8 @@ def allMovesGen():
         while y < 8:
             newMoves = np.array([],dtype=np.uint64)
             possibleCatches = np.array([],dtype=np.uint64)
-            _newMoves_ = np.uint64(0)
-            _possibleCatches_ = np.uint64(0)
+            _newMoves_ = EMPTY
+            _possibleCatches_ = EMPTY
             if y > 0 and x > 0:
                 possibleCatches = np.append(possibleCatches, np.uint64(1 << ((x-1)*8+y-1)))
                 _possibleCatches_ |= np.uint64(1 << ((x-1)*8+y-1))
@@ -58,7 +60,7 @@ def allMovesGen():
         y = 0
         while y < 8:
             newMoves = np.array([],dtype=np.uint64)
-            _newMoves_ = np.uint64(0)
+            _newMoves_ = EMPTY
             x1 = (x + 1) % 8
             y1 = (y + 1) % 8
             while x1 != x:
@@ -81,7 +83,7 @@ def allMovesGen():
             x1 = x
             y1 = y
             newMoves = np.array([],dtype=np.uint64)
-            _newMoves_ = np.uint64(0)
+            _newMoves_ = EMPTY
             while x1 < 7 and y1 < 7:
                 x1 += 1
                 y1 += 1
@@ -118,7 +120,7 @@ def allMovesGen():
         y = 0
         while y < 8:
             newMoves = np.array(0,dtype=np.uint64)
-            _newMoves_ = np.uint64(0)
+            _newMoves_ = EMPTY
             if x > 0 and y > 0:
                 newMoves = np.append(newMoves, np.uint64(1 << ((x-1)*8 + y-1)))
                 _newMoves_ |= np.uint64(1 << ((x-1)*8 + y-1))
@@ -153,7 +155,7 @@ def allMovesGen():
         y = 0
         while y < 8:
             newMoves = np.array(0,dtype=np.uint64)
-            _newMoves_ = np.uint64(0)
+            _newMoves_ = EMPTY
             if x > 0 and y > 1:
                 newMoves = np.append(newMoves, np.uint64(1 << ((x-1)*8 + y-2)))
                 _newMoves_ |= np.uint64(1 << ((x-1)*8 + y-2))
@@ -191,12 +193,12 @@ def allShadowsGen():
     while x < 8:
         y = 0
         while y < 8:
-            newShadows = np.array([np.uint64(0)]*64)
+            newShadows = np.array([EMPTY]*64)
             x1 = (x + 1) % 8
             y1 = (y + 1) % 8
             while x1 != x:
                 x2 = x1
-                _shadows_ = np.uint64(0)
+                _shadows_ = EMPTY
                 if x2 < x:
                     x2 -= 1
                     while x2 >= 0:
@@ -211,7 +213,7 @@ def allShadowsGen():
                 x1 = (x1 + 1) % 8
             while y1 != y:
                 y2 = y1
-                _shadows_ = np.uint64(0)
+                _shadows_ = EMPTY
                 if y2 < y:
                     y2 -= 1
                     while y2 >= 0:
@@ -235,9 +237,9 @@ def allShadowsGen():
         while y < 8:
             x1 = x
             y1 = y
-            newShadows = np.array([np.uint64(0)]*64)
+            newShadows = np.array([EMPTY]*64)
             while x1 < 7 and y1 < 7:
-                _shadows_ = np.uint64(0)
+                _shadows_ = EMPTY
                 x1 += 1
                 y1 += 1
                 x2 = x1 + 1
@@ -250,7 +252,7 @@ def allShadowsGen():
             x1 = x
             y1 = y
             while x1 < 7 and y1 > 0:
-                _shadows_ = np.uint64(0)
+                _shadows_ = EMPTY
                 x1 += 1
                 y1 -= 1
                 x2 = x1 + 1
@@ -263,7 +265,7 @@ def allShadowsGen():
             x1 = x
             y1 = y
             while x1 > 0 and y1 > 0:
-                _shadows_ = np.uint64(0)
+                _shadows_ = EMPTY
                 x1 -= 1
                 y1 -= 1
                 x2 = x1 - 1
@@ -276,7 +278,7 @@ def allShadowsGen():
             x1 = x
             y1 = y
             while x1 > 0 and y1 < 7:
-                _shadows_ = np.uint64(0)
+                _shadows_ = EMPTY
                 x1 -= 1
                 y1 += 1
                 x2 = x1 - 1
@@ -303,7 +305,7 @@ def betweenGen():
             while x1 < 8:
                 y1 = 0
                 while y1 < 8:
-                    bwH = np.uint64(0)
+                    bwH = EMPTY
                     if x1 == x:
                         y2 = y1
                         while y2 + 1 < y:

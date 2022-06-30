@@ -4,6 +4,7 @@ from moves import *
 import time
 from copy import deepcopy
 
+EMPTY = np.uint64(0)
 
 def fieldToString(field: np.uint64):
     field = np.ceil(np.log2(field)).astype(int)
@@ -40,7 +41,7 @@ def bits(n):
 def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
     if not np.any(field):
         print(toFen(board))
-        return np.uint64(0)
+        return EMPTY
     field = np.max(toNumber(field))
     if (enemy & board.pieceBitboards[2] & allMoves[5][field][2]):
         return (enemy & board.pieceBitboards[2] & allMoves[5][field][2])
@@ -56,7 +57,7 @@ def attacked(board, enemy: np.ndarray,white: bool,field: np.uint64, all):
             blockers = between[field][toNumber(n)] & all
             if not blockers:
                 return (between[field][toNumber(n)] | n)
-    return np.uint64(0)
+    return EMPTY
 
 
 def inCheck(board, color: np.uint64, enemy: np.uint64, white: bool, all):
@@ -139,7 +140,7 @@ def pinned(board, color: np.uint64, enemy: np.uint64):
     king = np.max(board.pieceList[5] & color)
     kNumber = toNumber(king)
     attackers = np.append((allMoves[2][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[1])) & enemy), (allMoves[3][kNumber][1] & (np.bitwise_or.reduce(board.pieceList[4]) | np.bitwise_or.reduce(board.pieceList[3])) & enemy))
-    pinned = np.uint64(0)
+    pinned = EMPTY
     for n in nonzeroElements(attackers):
         blockers = between[kNumber][toNumber(n)] & board.all
         if popcount_zero(blockers) == 1:
