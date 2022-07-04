@@ -32,6 +32,11 @@ KING_SPAN = strBBtoBB("""
                       """)
 CASTLE_ROOKS = [63,56,7,0]
 
+CASTLE_K = np.uint64(6917529027641081856)
+CASTLE_Q = np.uint64(1008806316530991104)
+CASTLE_k = np.uint64(96)
+CASTLE_q = np.uint64(14)
+
 RankMasks8 = [np.uint64(0xFF),np.uint64(0xFF00), np.uint64(0xFF0000), np.uint64(0xFF000000), np.uint64(
     0xFF00000000), np.uint64(0xFF0000000000), np.uint64(0xFF000000000000), np.uint64(0xFF00000000000000)]
 
