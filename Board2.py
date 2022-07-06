@@ -1,9 +1,12 @@
 from array import array
+from random import *
 import re
+from time import time
 import numpy as np
 from helpers import *
 from constants import *
 from copy import copy
+from algorithms import *
 
 
 class Board:
@@ -30,6 +33,7 @@ class Board:
     OCCUPIED = np.uint64(0)
 
     MOVE_HISTORY = []
+    STATE_HISTORY = {} #später transpostion table?
 
     isWhiteTurn = True
     castleRight = "KQkq"
@@ -166,7 +170,7 @@ class Board:
 
         
     
-    def possibleMovesB(self) :
+    def possibleMovesB(self):
         #added WK to avoid illegal capture
         self.NOT_MY_PIECES=~(self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK|self.WK)
         #omitted BK to avoid illegal capture
@@ -290,11 +294,11 @@ class Board:
 
         # move 2 forward
         if self.isWhiteTurn:
-            PAWN_MOVES = (self.WP >> np.uint64(16)) & self.EMPTY & RANK_4
+            PAWN_MOVES = (self.WP >> np.uint64(16)) & self.EMPTY & (self.EMPTY >> np.uint64(8)) & RANK_4
             P = self.WP
             K = self.WK
         else:
-            PAWN_MOVES = (self.BP << np.uint64(16)) & self.EMPTY & RANK_5
+            PAWN_MOVES = (self.BP << np.uint64(16)) & self.EMPTY & (self.EMPTY << np.uint64(8)) & RANK_5
             P = self.BP
             K = self.BK
 
@@ -548,7 +552,7 @@ class Board:
     def getMovesK(self, K):
         if self.isWhiteTurn:
             type = 'K'
-            castleRightK = 'K' in self.castleRight
+            castleRightK = 'K' in self.castleRight #castleRight2 ist vielleicht besser als string basiert
             castleRightQ = 'Q' in self.castleRight
             castleK = CASTLE_K
             castleQ = CASTLE_Q
@@ -575,13 +579,13 @@ class Board:
 
         if castleRightK and castleK & safe & self.EMPTY == castleK :
             move = {}
-            move['toString'] = "Castle"
+            move['toString'] = "0-0"
             move['type'] = type
             move['castle'] = "k"
             moves.append(move)
         if castleRightQ and castleQ & safe & self.EMPTY == castleQ :
             move = {}
-            move['toString'] = "Castle"
+            move['toString'] = "0-0-0"
             move['type'] = type
             move['castle'] = "q"
             moves.append(move)
@@ -598,32 +602,7 @@ class Board:
             possibility&=~j
             j=possibility&~(possibility- ONE)
         return moves
-    
-    # TODO Feldern zwischen rochierenden Turm und König müssen leer sein
-    # TODO König darf nicht im Schach sein
-    # TODO Zielfeld des königs und weg des könig nicht dürfen nicht angegriffen sein
-    def getCastleFor(self, isForWhite):
-        if isForWhite:
-            shift = 0
-            R = self.WR
-            row = 0
-        else:
-            shift = 2
-            R = self.BR
-            row = 7
-        moves=[]
-        if self.castleRight2[0+shift] and ((ONE<<np.uint64(CASTLE_ROOKS[0+shift])) & R)!=0:
-            moves.append({
-                'toString':'K'+makeField(row,4)+'-'+makeField(row,6),
-                'isHit': False
-            })
-        if self.castleRight2[1+shift] and ((ONE<<np.uint64(CASTLE_ROOKS[1+shift])) & R)!=0:
-            moves.append({
-                'toString':'K'+makeField(row,4)+'-'+makeField(row,2),
-                'isHit': False
-            })
-        return moves
-        
+
     def unsafeFor(self, isForWhite: bool, board:np.uint64 = None, destination: np.uint64 = None):
         """
         Generates a bitboard with all fields that would put the King of the color set through `isFormWhite` in check/danger.
@@ -792,6 +771,12 @@ class Board:
                 self.clearDestination(False, destination, undoMove) 
 
         self.MOVE_HISTORY.append(undoMove)
+        boardString = getBoardStr(self) #might be replaced with hash function later
+        if boardString in self.STATE_HISTORY:
+            self.STATE_HISTORY[boardString] += 1
+        else:
+            self.STATE_HISTORY[boardString] = 1
+
         self.isWhiteTurn = not self.isWhiteTurn
         if move.get('double'):
             self.enPassant = move['double']
@@ -934,6 +919,8 @@ class Board:
 
     def undoLastMove(self):
         last, self.MOVE_HISTORY = self.MOVE_HISTORY[-1], self.MOVE_HISTORY[:-1]
+        self.STATE_HISTORY[getBoardStr(self)]-=1 #might be replaced with hash function later
+        
         for type, value in last:
             if type =='P':
                 self.WP = value
@@ -962,7 +949,8 @@ class Board:
             elif type == 'castle':
                 self.castleRight = value
         self.isWhiteTurn = not self.isWhiteTurn
-        self.enPassant = '-'
+        self.enPassant = '-' #ist aber nicht immer der Fall. ?
+        
     
     def printBoard(self):
         printBits(self.WP, 'White Pawns')
@@ -978,12 +966,67 @@ class Board:
         printBits(self.BQ, 'Black Queen')
         printBits(self.BR, 'Black Rooks')
         printBits(self.BK, 'Black King')
+        
+    def evaluate(self):
+        value = 0
+        colorfactor = -1
+        if self.isWhiteTurn:
+            colorfactor = 1
 
-  
-# //////////////////
+        pawns = 1*(countSetBits(self.WP) - countSetBits(self.BP))
+        knightsAndBishops = 3*(countSetBits(self.WN | self.WB) - countSetBits(self.BN | self.BB))
+        rooks = 5* (countSetBits(self.WR) - countSetBits(self.BR))
+        queens = 9 * (countSetBits(self.WQ) - countSetBits(self.BQ))
+        squarePieceBalance = colorfactor*(queens + rooks + knightsAndBishops + pawns)
+        
+        simpleMobility = colorfactor*(len(self.possibleMovesW()) - len(self.possibleMovesB()))
+        
+        value = squarePieceBalance + simpleMobility
+        
+        if self.isCheck(): value = -10
+        if self.isRemis(): value = -100
+        if self.isCheckMate(): value = -10000
+        if self.isKingOfTheHill(): value = 10000
+        
+        return value 
+        
+    
+# //////////////////////////////////////////////////////
 #
-#       Tests
+#                    State checks
 #
-# ///////////////////
+# //////////////////////////////////////////////////////
 
-b = Board('r3kbnr/pppppppp/1nbq4/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1')
+    def isGameDone(self):
+        return self.isCheckMate() or self.isKingOfTheHill() or self.isRemis()
+        
+    def isCheck(self):
+        K = self.BK
+        if (self.isWhiteTurn):
+            K = self.WK
+        return self.unsafeFor(self.isWhiteTurn) & K > 0
+    
+    def isCheckMate(self):
+        return len(self.getMoves()) == 0 and self.isCheck()
+    
+    def isKingOfTheHill(self):
+        K = self.BK
+        if (self.isWhiteTurn):
+            K = self.WK
+        return HILLS & K > 0
+    
+    def isRemis(self):
+        return self.is3Fold() or self.is50Rule() or self.isStaleMate()
+        
+    def isStaleMate(self):
+        return len(self.getMoves()) == 0 and not self.isCheck()
+        
+    def is50Rule(self):
+        return self.halfmoveClock == 50 # or 100??
+
+    def is3Fold(self):
+        for key in self.STATE_HISTORY:
+            if self.STATE_HISTORY[key] >= 3:
+                return True
+        return False
+
