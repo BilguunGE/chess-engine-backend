@@ -1,11 +1,12 @@
 from random import randint, random
 import numpy as np
 from math import log2
+from constants import *
 
 # TODO Move away from string op
-def trailingZeros(s):
-    s = np.binary_repr(s,width=64)
-    return len(s) - len(s.rstrip('0'))
+def trailingZeros(v):
+    v = int(v)
+    return (v & -v).bit_length() - 1
 
 # TODO buggy!
 # def countTrailingZeros(v):
@@ -14,9 +15,9 @@ def trailingZeros(s):
 #         res = 0
 #     return res 
 
-def strBBtoBB(str):
-    bbStr = str.replace("\n","").replace(" ","")
-    return np.uint64(int(bbStr,2))
+# def strBBtoBB(str):
+#     bbStr = str.replace("\n","").replace(" ","")
+#     return np.uint64(int(bbStr,2))
     
 def printBits(num, title=''):
     print()
