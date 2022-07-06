@@ -229,14 +229,14 @@ class Board:
                 move['to'] = np.uint64((i//8)*8 + (i % 8))
                 move['type'] = type
                 #check if K is in danger
-                previewBoardP = self.doMoveHelper(move, P)
-                boardAll = self.getModifiedBoard(type, previewBoardP)
-                unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                if unsafe & K == 0:
-                    if isPromo:
-                        self.promoHelper(self.isWhiteTurn, move)
-                    else:
-                        self.moves.append(move)
+                # previewBoardP = self.doMoveHelper(move, P)
+                # boardAll = self.getModifiedBoard(type, previewBoardP)
+                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
+                # if unsafe & K == 0:
+                if isPromo:
+                    self.promoHelper(self.isWhiteTurn, move)
+                else:
+                    self.moves.append(move)
 
         # beat left
         if self.isWhiteTurn:
@@ -262,14 +262,14 @@ class Board:
                 move['to'] = np.uint64((i//8)*8+(i % 8))
                 move['type'] = type
                 #check if K is in danger
-                previewBoardP = self.doMoveHelper(move, P)
-                boardAll = self.getModifiedBoard(type, previewBoardP)
-                unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                if unsafe & K == 0:
-                    if isPromo:
-                        self.promoHelper(self.isWhiteTurn, move)
-                    else:
-                        self.moves.append(move)
+                # previewBoardP = self.doMoveHelper(move, P)
+                # boardAll = self.getModifiedBoard(type, previewBoardP)
+                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
+                # if unsafe & K == 0:
+                if isPromo:
+                    self.promoHelper(self.isWhiteTurn, move)
+                else:
+                    self.moves.append(move)
 
         # move 1 forward
         if self.isWhiteTurn:
@@ -295,14 +295,14 @@ class Board:
                 move['to'] = np.uint64((i//8)*8+(i%8))
                 move['type'] = type
                 #check if K is in danger
-                previewBoardP = self.doMoveHelper(move, P)
-                boardAll = self.getModifiedBoard(type, previewBoardP)
-                unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                if unsafe & K == 0:
-                    if isPromo:
-                        self.promoHelper(self.isWhiteTurn, move)
-                    else:
-                        self.moves.append(move)
+                # previewBoardP = self.doMoveHelper(move, P)
+                # boardAll = self.getModifiedBoard(type, previewBoardP)
+                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
+                # if unsafe & K == 0:
+                if isPromo:
+                    self.promoHelper(self.isWhiteTurn, move)
+                else:
+                    self.moves.append(move)
 
         # move 2 forward
         if self.isWhiteTurn:
@@ -323,11 +323,11 @@ class Board:
                 move['type'] = type
                 move['double'] = makeField((i//8)+(color*1), i % 8)
                 #check if K is in danger
-                previewBoardP = self.doMoveHelper(move, P)
-                boardAll = self.getModifiedBoard(type, previewBoardP)
-                unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                if unsafe & K == 0:
-                    self.moves.append(move)
+                # previewBoardP = self.doMoveHelper(move, P)
+                # boardAll = self.getModifiedBoard(type, previewBoardP)
+                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
+                # if unsafe & K == 0:
+                self.moves.append(move)
 
         if self.enPassant != '-':
             RANK = FileMasks8[self.enPassant[0]]
@@ -351,16 +351,16 @@ class Board:
                     move['type'] = type
                     move['enPassant'] = True
                     #check if K is in danger
-                    previewBoardP = self.doMoveHelper(move, P)
-                    boardAll = self.getModifiedBoard(type, previewBoardP)
+                    # previewBoardP = self.doMoveHelper(move, P)
+                    # boardAll = self.getModifiedBoard(type, previewBoardP)
                     if self.isWhiteTurn:
                         destination = np.uint64(((((i//8)-(color*1))+1)*8)+(i % 8))
                     else:
                         destination = np.uint64(((((i//8)-(color*1))-1)*8)+(i % 8))
-                    unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, destination)
-                    if unsafe & K == 0:
-                        move['enemy'] = destination
-                        self.moves.append(move)
+                    # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, destination)
+                    # if unsafe & K == 0:
+                    move['enemy'] = destination
+                    self.moves.append(move)
 
             # en passant left
             if self.isWhiteTurn:
@@ -381,16 +381,16 @@ class Board:
                     move['type'] = type
                     move['enPassant'] = True
                     #check if K is in danger
-                    previewBoardP = self.doMoveHelper(move, P)
-                    boardAll = self.getModifiedBoard(type, previewBoardP)
+                    # previewBoardP = self.doMoveHelper(move, P)
+                    # boardAll = self.getModifiedBoard(type, previewBoardP)
                     if self.isWhiteTurn:
                         destination = np.uint64(((((i//8)-(color*1))+1)*8)+(i % 8))
                     else:
                         destination = np.uint64(((((i//8)-(color*1))-1)*8)+(i % 8))
-                    unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, destination)
-                    if unsafe & K == 0:
-                        move['enemy'] = destination
-                        self.moves.append(move)
+                    # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, destination)
+                    # if unsafe & K == 0:
+                    move['enemy'] = destination
+                    self.moves.append(move)
     
     def promoHelper(self, isWhiteTurn:bool ,move):
         moveR = copy(move)
@@ -440,11 +440,11 @@ class Board:
                 move['to'] = np.uint64(((index//8)*8)+(index%8))
                 move['type'] = type
                 #check if K is in danger
-                previewBoard = self.doMoveHelper(move, B)
-                boardAll = self.getModifiedBoard(type, previewBoard)
-                unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                if unsafe & K == 0:
-                    self.moves.append(move)
+                # previewBoard = self.doMoveHelper(move, B)
+                # boardAll = self.getModifiedBoard(type, previewBoard)
+                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
+                # if unsafe & K == 0:
+                self.moves.append(move)
 
                 possibility&=~j
                 j = possibility & ~(possibility - ONE)
@@ -471,11 +471,11 @@ class Board:
                 move['to'] = np.uint64(((index//8)*8)+(index%8))
                 move['type'] = type
                 #check if K is in danger
-                previewBoard = self.doMoveHelper(move, R)
-                boardAll = self.getModifiedBoard(type, previewBoard)
-                unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                if unsafe & K == 0:
-                    self.moves.append(move)      
+                # previewBoard = self.doMoveHelper(move, R)
+                # boardAll = self.getModifiedBoard(type, previewBoard)
+                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
+                # if unsafe & K == 0:
+                self.moves.append(move)      
 
                 possibility&=~j
                 j = possibility & ~(possibility - ONE)
@@ -502,11 +502,11 @@ class Board:
                 move['to'] = np.uint64(((index//8)*8)+(index%8))
                 move['type'] = type
                 #check if K is in danger
-                previewBoard = self.doMoveHelper(move, Q)
-                boardAll = self.getModifiedBoard(type, previewBoard)
-                unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                if unsafe & K == 0:
-                    self.moves.append(move)
+                # previewBoard = self.doMoveHelper(move, Q)
+                # boardAll = self.getModifiedBoard(type, previewBoard)
+                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
+                # if unsafe & K == 0:
+                self.moves.append(move)
 
                 possibility&=~j
                 j = possibility & ~(possibility - ONE)
@@ -540,11 +540,11 @@ class Board:
                 move['to'] = np.uint64(((index//8)*8)+(index%8))
                 move['type'] = type
                 #check if K is in danger
-                previewBoard = self.doMoveHelper(move, N)
-                boardAll = self.getModifiedBoard(type, previewBoard)
-                unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                if unsafe & K == 0:
-                    self.moves.append(move)      
+                # previewBoard = self.doMoveHelper(move, N)
+                # boardAll = self.getModifiedBoard(type, previewBoard)
+                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
+                # if unsafe & K == 0:
+                self.moves.append(move)      
 
                 possibility&=~j
                 j=possibility&~(possibility- ONE)
