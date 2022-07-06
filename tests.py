@@ -13,9 +13,9 @@ def checkMoveGenSpeed(board, iterations):
     i = 0
     list = []
     while i < iterations:
-        start = time()
+        start = time()*1000
         board.getMoves()
-        end = time()
+        end = time()*1000
         list.append(end - start)
         i +=1
     print(sum(list)/len(list))
