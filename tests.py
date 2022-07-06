@@ -61,4 +61,4 @@ firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 
 # print(alphaBeta(startGame, 2))
 # testDoUndo(startGame, 1000) #throws errors sometimes! doMove undoMove not fully done.
-# checkMoveGenSpeed(startGame,1000)
+checkMoveGenSpeed(startGame,1000)
