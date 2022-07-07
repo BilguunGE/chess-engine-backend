@@ -1,102 +1,77 @@
-from operator import itemgetter
 from time import time
 from helpers import *
-    
-def minimax(board,depth):
-    nextMoves = []
-    if depth <= 0:
-        return 
-    start = time()
-    isWhite = board.isWhiteTurn
-    moves = board.getMoves()
-    
-    for move in moves:
-        board.doMove(move)
-        nextMoves.append({
-            "move": move,
-            "value": minimaxAlgorithm(board, depth - 1, False, isWhite)
-        })
-        board.undoLastMove()
-    end = time()
-    print("Minimax took "+ str(end - start)+ " seconds.")
-    highestVal = max(nextMoves, key=itemgetter("value"))["value"]
-    bestMoves = []
-    for move in nextMoves:
-        if move["value"] == highestVal:
-            bestMoves.append(move)
-    return pickRandom(bestMoves)
 
-def minimaxAlgorithm(board, depth, isMax, isWhiteAtRoot):
-    if depth == 0 or board.isGameDone():
-        colorFactor = -1
-        if board.isWhiteTurn and isWhiteAtRoot:
-            colorFactor = 1
-        return colorFactor * board.evaluate() * (1.1**depth)    
+# //////////////////////////////////////////////////////
+#
+#                    Next Move
+#
+# //////////////////////////////////////////////////////
+
+bestMoves = []
+
+# //////////////////////////////////////////////////////
+#
+#                    Algorithms
+#
+# //////////////////////////////////////////////////////
+
+def minimax(board, depth, isMax, playerAtMoveFactor, shouldSave):
+    global bestMoves
+    if (depth == 0) or board.isGameDone():
+        return playerAtMoveFactor * board.evaluate() * (1.1**depth)
     if isMax:
         value = float('-inf')
         for move in board.getMoves():
             board.doMove(move)
-            value = max(value, minimaxAlgorithm(board, depth-1, False, isWhiteAtRoot))
+            score = minimax(board, depth-1, 0, -playerAtMoveFactor, 0)
+            value = max(value, score)
             board.undoLastMove()
+            if shouldSave:
+                bestMoves.append({ 'move': move, 'value': score})
         return value
     else:
         value = float('inf')
         for move in board.getMoves():
             board.doMove(move)
-            value = min(value, minimaxAlgorithm(board, depth-1, True, isWhiteAtRoot))
+            value = min(value, minimax(board, depth-1, 1,-playerAtMoveFactor, 0))
             board.undoLastMove()
-        return value
-    
+        return value    
         
-def alphaBeta(board,depth):
-    # might switch to single move approach for bigger cutoff effect
-    nextMoves = []
-    if depth <= 0:
-        return 
-    start = time()
-    isWhite = board.isWhiteTurn
-    moves = board.getMoves()
-    for move in moves:
-        board.doMove(move)
-        value = alphaBetaAlgorithm(board, depth - 1, -10000,10000, False, isWhite)
-        nextMoves.append({
-            "move": move,
-            "value": value
-        })
-        board.undoLastMove()
-        if value >= 10000:
-            break
-    end = time()
-    print("AlphaBeta took "+ str(end - start)+ " seconds.")
-    highestVal = max(nextMoves, key=itemgetter("value"))["value"]
-    bestMoves = []
-    for move in nextMoves:
-        if move["value"] == highestVal:
-            bestMoves.append(move)
-    return pickRandom(bestMoves)
-
-def alphaBetaAlgorithm(board, depth, alpha, beta, isMax, isWhiteAtRoot):
-    moves = board.getMoves()
+def alphaBeta(board, depth, alpha, beta, isMax, playerAtMoveFactor, shouldSave, stopTime):
+    global bestMoves
+    if time() * 1000 - 500 >= stopTime:
+        timeFactor = 1
+        if isMax:
+            timeFactor = -1
+        return timeFactor * playerAtMoveFactor * 10000
+    hash = board.genZobHash()
+    if hash in board.ttable:
+        print("already known state!")
+        if board.ttable[hash]["depth"] >= depth:
+            return board.ttable[hash]["value"]
     if (depth == 0) or board.isGameDone():
-        colorFactor = -1
-        if board.isWhiteTurn and isWhiteAtRoot:
-            colorFactor = 1
-        return colorFactor * board.evaluate() * (1.1**depth)
+        return playerAtMoveFactor * board.evaluate() * (1.1**depth)
     if isMax:
         value = alpha
-        for move in moves:
+        for move in board.getMoves():
             board.doMove(move)
-            value = max(value, alphaBetaAlgorithm(board, depth - 1, value, beta, False, isWhiteAtRoot))
+            score = alphaBeta(board, depth - 1, value, beta, 0, -playerAtMoveFactor, 0, stopTime)
+            value = max(value, score)
             board.undoLastMove()
+            if shouldSave:
+                bestMoves.append({ "move": move, "value": score })
             if value >= beta:
                 break
+        board.ttable[hash] = {"depth":depth, "value":value}
         return value
     else:
         value = beta
-        for move in moves:
+        for move in board.getMoves():
             board.doMove(move)
-            value = min(value, alphaBetaAlgorithm(board, depth - 1, alpha, value, True, isWhiteAtRoot))
+            value = min(value, alphaBeta(board, depth - 1, alpha, value, 1, -playerAtMoveFactor, 0, stopTime))
             board.undoLastMove()
             if value <= alpha:
                 break
+        board.ttable[hash] = {"depth":depth, "value":value}
         return value
+        

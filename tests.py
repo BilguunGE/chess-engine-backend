@@ -13,12 +13,12 @@ def checkMoveGenSpeed(board, iterations):
     i = 0
     list = []
     while i < iterations:
-        start = time()*1000
+        start = time()
         board.getMoves()
-        end = time()*1000
+        end = time()
         list.append(end - start)
         i +=1
-    print(sum(list)/len(list))
+    print(str((sum(list)*1000)/len(list))+"ms")
     
     
 
@@ -59,7 +59,13 @@ firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 #
 # //////////////////////////////////////////////////////
 
-# print(alphaBeta(startGame, 2))
+# start = time()
+# # print(alphaBeta(midGame, 2, -10000, 10000, 1,1,1))
+# print(minimax(startGame, 2, 1, 1,1))
+# print(pickRandomBest(bestMoves))
+# print(time() - start)
+# print(bestMoves)
 # testDoUndo(startGame, 1000) #throws errors sometimes! doMove undoMove not fully done.
 # checkMoveGenSpeed(startGame,1000)
-print(minimax(firstOnTheHill, 4))
+# print(minimax(firstOnTheHill, 4))
+# print(startGame.genZobHash())

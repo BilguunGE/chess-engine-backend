@@ -34,10 +34,14 @@ class Board:
 
     MOVE_HISTORY = []
     STATE_HISTORY = {} #später transpostion table?
+    zobTable = [[np.uint64(randint(1,2**64 - 1)) for i in range(12)]for j in range(64)]
+    zobEnPass = [np.uint64(randint(1,2**64 - 1)) for i in range(8)]
+    zobCastle = [np.uint64(randint(1,2**64 - 1)) for i in range(4)]
+    zobTurn = np.uint64(randint(1,2**64 - 1))
+    ttable = {}
 
     isWhiteTurn = True
     castleRight = "KQkq"
-    castleRight2 = [True,True,True,True]
     enPassant = "-"
     halfmoveClock = 0
     fullmoveCount = 1
@@ -63,7 +67,6 @@ class Board:
             self.chessBoard = self.parseFEN(splittedFEN[0])
             self.isWhiteTurn = splittedFEN[1] == "w"
             self.castleRight = splittedFEN[2]
-            self.castleRight2 = castleStrToArr(splittedFEN[2])
             self.enPassant = splittedFEN[3]
             self.halfmoveClock = int(splittedFEN[4])
             self.fullmoveCount = int(splittedFEN[5])
@@ -152,6 +155,53 @@ class Board:
                 newChessBoard[row][col] = "k"
 
         return newChessBoard
+    
+    def genZobHash(self):
+        hash = np.uint64(0)
+        for i in range(64):
+            if (self.WP >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][0]
+            elif (self.BP >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][1]
+            elif (self.WN >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][2]
+            elif (self.BN >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][3]
+            elif (self.WB >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][4]
+            elif (self.BB >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][5]
+            elif (self.WR >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][6]
+            elif (self.BR >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][7]
+            elif (self.WQ >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][8]
+            elif (self.BQ >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][9]
+            elif (self.WK >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][10]
+            elif (self.BK >> np.uint64(i)) & ONE == ONE:
+                hash ^= self.zobTable[i][11]
+        if self.enPassant in squareNames:
+            hash ^= self.zobEnPass[int(self.enPassant[1])-1]
+        if "K" in self.castleRight:
+            hash ^= self.zobCastle[0]
+        if "Q" in self.castleRight:
+            hash ^= self.zobCastle[1]
+        if "k" in self.castleRight:
+            hash ^= self.zobCastle[2]
+        if "q" in self.castleRight:
+            hash ^= self.zobCastle[3]  
+        if not self.isWhiteTurn:
+            hash ^= self.zobTurn
+        return hash
+
+# //////////////////////////////////////////////////////
+#
+#                    Move Generator
+#
+# //////////////////////////////////////////////////////
 
     def getMoves(self):
         if self.isWhiteTurn:
@@ -166,7 +216,7 @@ class Board:
         self.MY_PIECES = self.WP|self.WN|self.WB|self.WR|self.WQ
         self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
         self.EMPTY=~self.OCCUPIED
-        return self.getMovesP()+self.getMovesB(self.WB)+self.getMovesN(self.WN)+self.getMovesQ(self.WQ)+self.getMovesR(self.WR)+self.getMovesK(self.WK)
+        return self.getMovesB(self.WB) + self.getMovesN(self.WN)+self.getMovesQ(self.WQ)+self.getMovesR(self.WR)+self.getMovesK(self.WK) + self.getMovesP()
 
         
     
@@ -177,7 +227,7 @@ class Board:
         self.MY_PIECES=self.BP|self.BN|self.BB|self.BR|self.BQ
         self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
         self.EMPTY=~self.OCCUPIED
-        return self.getMovesP()+self.getMovesB(self.BB)+self.getMovesN(self.BN)+self.getMovesQ(self.BQ)+self.getMovesR(self.BR)+self.getMovesK(self.BK)
+        return self.getMovesB(self.BB)+self.getMovesN(self.BN)+self.getMovesQ(self.BQ)+self.getMovesR(self.BR)+self.getMovesK(self.BK)+ self.getMovesP()
 
     
     def getMovesP(self):
@@ -552,7 +602,7 @@ class Board:
     def getMovesK(self, K):
         if self.isWhiteTurn:
             type = 'K'
-            castleRightK = 'K' in self.castleRight #castleRight2 ist vielleicht besser als string basiert
+            castleRightK = 'K' in self.castleRight
             castleRightQ = 'Q' in self.castleRight
             castleK = CASTLE_K
             castleQ = CASTLE_Q

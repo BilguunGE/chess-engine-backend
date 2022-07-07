@@ -1,3 +1,4 @@
+from operator import itemgetter
 from random import randint, random
 import numpy as np
 from math import log2
@@ -80,3 +81,14 @@ def countSetBits(number):
 def pickRandom(list):
     randIndex = randint(0, len(list)-1)
     return list[randIndex]
+
+def pickRandomBest(list, key='value'):
+    highestVal = max(list, key=itemgetter(key))[key]
+    moves = []
+    for move in list:
+        if move["value"] == highestVal:
+            moves.append(move)
+    return pickRandom(moves)
+
+def getMoveToString(move):
+    return move["toString"]
