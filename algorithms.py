@@ -74,4 +74,57 @@ def alphaBeta(board, depth, alpha, beta, isMax, playerAtMoveFactor, shouldSave, 
                 break
         board.ttable[hash] = {"depth":depth, "value":value}
         return value
+
+def alphaBetaTT(board, depth, alpha, beta, isMax, playerAtMoveFactor, shouldSave, stopTime):
+    global bestMoves
+    if time() * 1000 - 500 >= stopTime:
+        timeFactor = 1
+        if isMax:
+            timeFactor = -1
+        return timeFactor * playerAtMoveFactor * 10000
+
+    hash = board.genZobHash()
+    if board.ttable.get(hash):
+        print("already known state!")
+        objFound = board.ttable.get(hash)
+        if objFound.get('lowerbound')>= beta:
+             return objFound['lowerbound']
+        if objFound.get('upperbound') <= alpha:
+             return objFound['upperbound']
+        alpha = max(alpha, objFound.get('lowerbound'))
+        beta = min(beta, objFound.get('upperbound'))
+
+        
+    if (depth == 0) or board.isGameDone():
+        return playerAtMoveFactor * board.evaluate() * (1.1**depth)
+    if isMax:
+        value = alpha
+        for move in board.getMoves():
+            board.doMove(move)
+            score = alphaBeta(board, depth - 1, value, beta, 0, -playerAtMoveFactor, 0, stopTime)
+            value = max(value, score)
+            board.undoLastMove()
+            if shouldSave:
+                bestMoves.append({ "move": move, "value": score })
+            if value >= beta:
+                break
+    else:
+        value = beta
+        for move in board.getMoves():
+            board.doMove(move)
+            value = min(value, alphaBeta(board, depth - 1, alpha, value, 1, -playerAtMoveFactor, 0, stopTime))
+            board.undoLastMove()
+            if value <= alpha:
+                break
+
+    if value <= alpha:
+        id = board.getHash()
+        board.ttable.update({id: {'upperbound': value}})
+    if value > alpha and value < beta:
+        id = board.getHash()
+        board.ttable.update({id: {'lowerbound': value, 'upperbound': value}})
+    if value >= beta:
+        id = board.getHash()
+        board.ttable.update({id: {'lowerbound': value}})
+    return value
         
