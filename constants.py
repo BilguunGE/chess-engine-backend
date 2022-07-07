@@ -1,5 +1,5 @@
 import numpy as np
-from helpers import *
+from bitboard import msb_bitscan,lsb_bitscan
 
 ZERO_STRING = "0000000000000000000000000000000000000000000000000000000000000000"
 FILE_A=np.uint64(72340172838076673)
@@ -50,3 +50,43 @@ square = {
     281474976710656:'a2',   562949953421312:'b2',    1125899906842624:'c2',   2251799813685248:'d2',   4503599627370496:'e2',    9007199254740992:'f2',    18014398509481984:'g2',   36028797018963968:'h2', 
     72057594037927936:'a1', 144115188075855872:'b1', 288230376151711744:'c1', 576460752303423488:'d1', 1152921504606846976:'e1', 2305843009213693952:'f1', 4611686018427387904:'g1', 9223372036854775808:'h1' 
 }    
+
+def compute_first_rank_moves(i, occ):
+    # i is square index from 0 to 8
+    # occ is 8-bit number that represents occupancy of the rank 
+    # Returns first rank moves (as uint8)
+
+    left_ray = lambda x: x - np.uint8(1)
+    right_ray = lambda x: (~x) & ~(x - np.uint8(1))
+
+    x = np.uint8(1) << np.uint8(i)
+    occ = np.uint8(occ)
+
+    left_attacks = left_ray(x)
+    left_blockers = left_attacks & occ
+    if left_blockers != np.uint8(0):
+        leftmost = np.uint8(1) << msb_bitscan(np.uint64(left_blockers))
+        left_garbage = left_ray(leftmost)
+        left_attacks ^= left_garbage
+
+    right_attacks = right_ray(x)
+    right_blockers = right_attacks & occ
+    if right_blockers != np.uint8(0):
+        rightmost = np.uint8(1) << lsb_bitscan(np.uint64(right_blockers))
+        right_garbage = right_ray(rightmost)
+        right_attacks ^= right_garbage
+
+    return left_attacks ^ right_attacks
+
+
+
+FIRST_RANK_MOVES = np.fromiter(
+        (compute_first_rank_moves(i, occ)
+            for i in range(8) # 8 squares in a rank 
+            for occ in range(256)), # 2^8 = 256 possible occupancies of a rank
+        dtype=np.uint8,
+        count=8*256)
+FIRST_RANK_MOVES.shape = (8,256)
+
+A1H8_DIAG = np.uint64(0x8040201008040201)
+H1A8_ANTIDIAG = np.uint64(0x0102040810204080)

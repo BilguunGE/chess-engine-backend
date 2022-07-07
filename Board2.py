@@ -408,17 +408,69 @@ class Board:
 
     def HAndVMoves(self, s, OCCUPIED_CUSTOM = None):
         OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
-        binaryS = ONE << np.uint64(s)
-        possibilitiesHorizontal = (OCCUPIED - TWO * binaryS) ^ reverse(reverse(OCCUPIED) - TWO * reverse(binaryS))
-        possibilitiesVertical = ((OCCUPIED & FileMasks82[s % 8]) - (TWO * binaryS)) ^ reverse(reverse(OCCUPIED & FileMasks82[s % 8]) - (TWO * reverse(binaryS)))
-        return (possibilitiesHorizontal & RankMasks8[(s // 8)]) | (possibilitiesVertical & FileMasks82[s % 8])
+        # binaryS = ONE << np.uint64(s)
+        # possibilitiesHorizontal = (OCCUPIED - TWO * binaryS) ^ reverse(reverse(OCCUPIED) - TWO * reverse(binaryS))
+        # possibilitiesVertical = ((OCCUPIED & FileMasks82[s % 8]) - (TWO * binaryS)) ^ reverse(reverse(OCCUPIED & FileMasks82[s % 8]) - (TWO * reverse(binaryS)))
+        # return (possibilitiesHorizontal & RankMasks8[(s // 8)]) | (possibilitiesVertical & FileMasks82[s % 8])
+        return self.get_rank_moves_bb(s, OCCUPIED) | self.get_file_moves_bb(s, OCCUPIED)
     
     def DAndAntiDMoves(self, s:int, OCCUPIED_CUSTOM = None):
         OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
-        binaryS =ONE << np.uint64(s)
-        possibilitiesDiagonal = ((OCCUPIED & DiagonalMasks8[(s // 8) + (s % 8)]) - (TWO * binaryS)) ^ reverse(reverse(OCCUPIED & DiagonalMasks8[(s // 8) + (s % 8)]) - (TWO * reverse(binaryS)))
-        possibilitiesAntiDiagonal = ((OCCUPIED & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * binaryS)) ^ reverse(reverse(OCCUPIED & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * reverse(binaryS)))
-        return (possibilitiesDiagonal & DiagonalMasks8[(s // 8) + (s % 8)]) | (possibilitiesAntiDiagonal & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)])
+        # binaryS =ONE << np.uint64(s)
+        # possibilitiesDiagonal = ((OCCUPIED & DiagonalMasks8[(s // 8) + (s % 8)]) - (TWO * binaryS)) ^ reverse(reverse(OCCUPIED & DiagonalMasks8[(s // 8) + (s % 8)]) - (TWO * reverse(binaryS)))
+        # possibilitiesAntiDiagonal = ((OCCUPIED & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * binaryS)) ^ reverse(reverse(OCCUPIED & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * reverse(binaryS)))
+        # return (possibilitiesDiagonal & DiagonalMasks8[(s // 8) + (s % 8)]) | (possibilitiesAntiDiagonal & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)])
+        return self.get_diag_moves_bb(s, OCCUPIED) | self.get_antidiag_moves_bb(s, OCCUPIED)
+
+    def get_rank_moves_bb(self, i, occ):
+        """
+        i is index of square
+        occ is the combined occupancy of the board
+        """
+        f = i & np.uint8(7)
+        occ = RankMasks8[i//8] & occ # isolate rank occupancy
+        occ = (FILE_A * occ) >> np.uint8(56) # map to first rank
+        occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to rank
+        return RankMasks8[i//8] & occ
+
+    def get_file_moves_bb(self, i, occ):
+        """
+        i is index of square
+        occ is the combined occupancy of the board
+        """
+        f = np.uint8(i) & np.uint8(7)
+        # Shift to A file
+        occ = FILE_A & (occ >> f)
+        # Map occupancy and index to first rank
+        occ = (A1H8_DIAG * occ) >> np.uint8(56)
+        first_rank_index = (i ^ np.uint8(56)) >> np.uint8(3)
+        # Lookup moveset and map back to H file
+        occ = A1H8_DIAG * FIRST_RANK_MOVES[first_rank_index][occ]
+        # Isolate H file and shift back to original file
+        return (FILE_H & occ) >> (f ^ np.uint8(7))
+
+    def get_diag_moves_bb(self, i, occ):
+        """
+        i is index of square
+        occ is the combined occupancy of the board
+        """
+        f = i & np.uint8(7)
+        occ = DiagonalMasks8[(i // 8) + (i % 8)] & occ # isolate diagonal occupancy
+        occ = (FILE_A * occ) >> np.uint8(56) # map to first rank
+        occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to diagonal
+        return DiagonalMasks8[(i // 8) + (i % 8)] & occ
+
+
+    def get_antidiag_moves_bb(self, i, occ):
+        """
+        i is index of square
+        occ is the combined occupancy of the board
+        """
+        f = i & np.uint8(7)
+        occ = AntiDiagonalMasks8[(i // 8) + 7 - (i % 8)] & occ # isolate antidiagonal occupancy
+        occ = (FILE_A * occ) >> np.uint8(56) # map to first rank
+        occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to antidiagonal
+        return AntiDiagonalMasks8[(i // 8) + 7 - (i % 8)] & occ
     
     def getMovesB(self, B):
         if self.isWhiteTurn:
