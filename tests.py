@@ -29,8 +29,9 @@ def testDoUndo(board, moveAmount):
     i = 0
     while i < moveAmount:
         moves = board.getMoves()
-        randomIndex = randint(0,len(moves)-1)
-        board.doMove(moves[randomIndex])
+        if len(moves)>0:
+            randomIndex = randint(0,len(moves)-1)
+            board.doMove(moves[randomIndex])
         i = i + 1
     i = 0
     while i < moveAmount:
