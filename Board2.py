@@ -1,7 +1,6 @@
 from array import array
 from random import *
 import re
-from time import time
 import numpy as np
 from helpers import *
 from constants import *
@@ -210,9 +209,9 @@ class Board:
     def getMoves(self):
         self.moves.clear()
         if self.isWhiteTurn:
-            return self.possibleMovesW()
+            return self.filterMoves(self.possibleMovesW())
         else:
-            return self.possibleMovesB()
+            return self.filterMoves(self.possibleMovesB())
 
     def possibleMovesW(self):
         #added BK to avoid illegal capture
@@ -259,15 +258,11 @@ class Board:
         if self.isWhiteTurn:
             PAWN_MOVES = (self.WP >> np.uint64(7)) & self.BLACK_PIECES & ~FILE_A
             PAWN_MOVES_PROMO = (self.WP >> np.uint64(7)) & self.BLACK_PIECES & RANK_8 & ~FILE_A
-            P = self.WP
-            K = self.WK
             color = 1
             type = 'P' 
         else: 
             PAWN_MOVES = (self.BP << np.uint64(7)) & self.WHITE_PIECES  &~ FILE_H
             PAWN_MOVES_PROMO = (self.BP << np.uint64(7)) & self.WHITE_PIECES & RANK_1 & ~FILE_H
-            P = self.BP
-            K = self.BK
             color = -1
             type = 'p'
 
@@ -282,11 +277,6 @@ class Board:
                 move['from'] = np.uint64(((i//8)+(color*1))*8+((i % 8)-(color*1)))
                 move['to'] = np.uint64((i//8)*8 + (i % 8))
                 move['type'] = type
-                #check if K is in danger
-                # previewBoardP = self.doMoveHelper(move, P)
-                # boardAll = self.getModifiedBoard(type, previewBoardP)
-                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                # if unsafe & K == 0:
                 if isPromo:
                     self.promoHelper(self.isWhiteTurn, move)
                 else:
@@ -296,13 +286,9 @@ class Board:
         if self.isWhiteTurn:
             PAWN_MOVES = (self.WP >> np.uint64(9)) & self.BLACK_PIECES  & ~ FILE_H
             PAWN_MOVES_PROMO = (self.WP >> np.uint64(9)) & self.BLACK_PIECES & RANK_8 & ~FILE_H
-            P = self.WP
-            K = self.WK
         else:
             PAWN_MOVES = (self.BP << np.uint64(9)) & self.WHITE_PIECES  & ~ FILE_A
             PAWN_MOVES_PROMO = (self.BP << np.uint64(9)) & self.WHITE_PIECES & RANK_1 & ~FILE_A
-            P = self.BP
-            K = self.BK
 
         for i in range(64):
             move = {}
@@ -315,11 +301,6 @@ class Board:
                 move['from'] = np.uint64(((i//8)+(color*1))*8+((i % 8)-(color*1))) 
                 move['to'] = np.uint64((i//8)*8+(i % 8))
                 move['type'] = type
-                #check if K is in danger
-                # previewBoardP = self.doMoveHelper(move, P)
-                # boardAll = self.getModifiedBoard(type, previewBoardP)
-                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                # if unsafe & K == 0:
                 if isPromo:
                     self.promoHelper(self.isWhiteTurn, move)
                 else:
@@ -329,13 +310,9 @@ class Board:
         if self.isWhiteTurn:
             PAWN_MOVES = (self.WP >> np.uint64(8)) & self.EMPTY 
             PAWN_MOVES_PROMO = (self.WP >> np.uint64(8)) & self.EMPTY & RANK_8
-            P = self.WP
-            K = self.WK
         else:
             PAWN_MOVES = (self.BP << np.uint64(8)) & self.EMPTY
             PAWN_MOVES_PROMO = (self.BP << np.uint64(8)) & self.EMPTY & RANK_1
-            P = self.BP
-            K = self.BK
 
         for i in range(64):
             move = {}
@@ -348,11 +325,6 @@ class Board:
                 move['from'] = np.uint64(((i//8)+(color*1))*8+(i % 8))
                 move['to'] = np.uint64((i//8)*8+(i%8))
                 move['type'] = type
-                #check if K is in danger
-                # previewBoardP = self.doMoveHelper(move, P)
-                # boardAll = self.getModifiedBoard(type, previewBoardP)
-                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                # if unsafe & K == 0:
                 if isPromo:
                     self.promoHelper(self.isWhiteTurn, move)
                 else:
@@ -361,12 +333,8 @@ class Board:
         # move 2 forward
         if self.isWhiteTurn:
             PAWN_MOVES = (self.WP >> np.uint64(16)) & self.EMPTY & (self.EMPTY >> np.uint64(8)) & RANK_4
-            P = self.WP
-            K = self.WK
         else:
             PAWN_MOVES = (self.BP << np.uint64(16)) & self.EMPTY & (self.EMPTY << np.uint64(8)) & RANK_5
-            P = self.BP
-            K = self.BK
 
         for i in range(64):
             move = {}
@@ -376,11 +344,6 @@ class Board:
                 move['to'] = np.uint64((i//8)*8+(i % 8))
                 move['type'] = type
                 move['double'] = makeField((i//8)+(color*1), i % 8)
-                #check if K is in danger
-                # previewBoardP = self.doMoveHelper(move, P)
-                # boardAll = self.getModifiedBoard(type, previewBoardP)
-                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                # if unsafe & K == 0:
                 self.moves.append(move)
 
         if self.enPassant != '-':
@@ -389,12 +352,8 @@ class Board:
             # en passant right
             if self.isWhiteTurn:
                 PAWN_MOVES = (self.WP << ONE) & self.BP & RANK_5 & ~FILE_A & RANK
-                P = self.WP
-                K = self.WK
             else:
                 PAWN_MOVES = (self.BP >> ONE) & self.WP & RANK_4 & ~FILE_H & RANK
-                P = self.BP
-                K = self.BK
             
             for i in range(64):
                 move = {}
@@ -404,27 +363,18 @@ class Board:
                     move['to'] = np.uint64(((i//8)-(color*1))*8+(i % 8))
                     move['type'] = type
                     move['enPassant'] = True
-                    #check if K is in danger
-                    # previewBoardP = self.doMoveHelper(move, P)
-                    # boardAll = self.getModifiedBoard(type, previewBoardP)
                     if self.isWhiteTurn:
                         destination = np.uint64(((((i//8)-(color*1))+1)*8)+(i % 8))
                     else:
                         destination = np.uint64(((((i//8)-(color*1))-1)*8)+(i % 8))
-                    # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, destination)
-                    # if unsafe & K == 0:
                     move['enemy'] = destination
                     self.moves.append(move)
 
             # en passant left
             if self.isWhiteTurn:
                 PAWN_MOVES = (self.WP >> ONE) & self.BP & RANK_5 & ~FILE_H & RANK
-                P = self.WP
-                K = self.WK
             else:
                 PAWN_MOVES = (self.BP << ONE) & self.WP & RANK_4 & ~FILE_A & RANK
-                P = self.BP
-                K = self.BK
 
             for i in range(64):
                 move = {}
@@ -434,15 +384,10 @@ class Board:
                     move['to'] = np.uint64(((i//8)-(color*1))*8+(i % 8))
                     move['type'] = type
                     move['enPassant'] = True
-                    #check if K is in danger
-                    # previewBoardP = self.doMoveHelper(move, P)
-                    # boardAll = self.getModifiedBoard(type, previewBoardP)
                     if self.isWhiteTurn:
                         destination = np.uint64(((((i//8)-(color*1))+1)*8)+(i % 8))
                     else:
                         destination = np.uint64(((((i//8)-(color*1))-1)*8)+(i % 8))
-                    # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, destination)
-                    # if unsafe & K == 0:
                     move['enemy'] = destination
                     self.moves.append(move)
 
@@ -463,18 +408,10 @@ class Board:
 
     def HAndVMoves(self, s, OCCUPIED_CUSTOM = None):
         OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
-        # binaryS = ONE << np.uint64(s)
-        # possibilitiesHorizontal = (OCCUPIED - TWO * binaryS) ^ reverse(reverse(OCCUPIED) - TWO * reverse(binaryS))
-        # possibilitiesVertical = ((OCCUPIED & FileMasks82[s % 8]) - (TWO * binaryS)) ^ reverse(reverse(OCCUPIED & FileMasks82[s % 8]) - (TWO * reverse(binaryS)))
-        # return (possibilitiesHorizontal & RankMasks8[(s // 8)]) | (possibilitiesVertical & FileMasks82[s % 8])
         return self.get_rank_moves_bb(s, OCCUPIED) | self.get_file_moves_bb(s, OCCUPIED)
     
     def DAndAntiDMoves(self, s:int, OCCUPIED_CUSTOM = None):
         OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
-        # binaryS =ONE << np.uint64(s)
-        # possibilitiesDiagonal = ((OCCUPIED & DiagonalMasks8[(s // 8) + (s % 8)]) - (TWO * binaryS)) ^ reverse(reverse(OCCUPIED & DiagonalMasks8[(s // 8) + (s % 8)]) - (TWO * reverse(binaryS)))
-        # possibilitiesAntiDiagonal = ((OCCUPIED & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * binaryS)) ^ reverse(reverse(OCCUPIED & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)]) - (TWO * reverse(binaryS)))
-        # return (possibilitiesDiagonal & DiagonalMasks8[(s // 8) + (s % 8)]) | (possibilitiesAntiDiagonal & AntiDiagonalMasks8[(s // 8) + 7 - (s % 8)])
         return self.get_diag_moves_bb(s, OCCUPIED) | self.get_antidiag_moves_bb(s, OCCUPIED)
 
     def get_rank_moves_bb(self, i, occ):
@@ -484,7 +421,7 @@ class Board:
         """
         f = i & np.uint8(7)
         occ = RankMasks8[i//8] & occ # isolate rank occupancy
-        occ = (FILE_A * occ) >> np.uint8(56) # map to first rank
+        occ = np.multiply(FILE_A, occ) >> np.uint8(56) # map to first rank
         occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to rank
         return RankMasks8[i//8] & occ
 
@@ -497,10 +434,10 @@ class Board:
         # Shift to A file
         occ = FILE_A & (occ >> f)
         # Map occupancy and index to first rank
-        occ = (A1H8_DIAG * occ) >> np.uint8(56)
+        occ = np.multiply(A1H8_DIAG, occ) >> np.uint8(56)
         first_rank_index = (i ^ np.uint8(56)) >> np.uint8(3)
         # Lookup moveset and map back to H file
-        occ = A1H8_DIAG * FIRST_RANK_MOVES[first_rank_index][occ]
+        occ = np.multiply(A1H8_DIAG, FIRST_RANK_MOVES)[first_rank_index][occ]
         # Isolate H file and shift back to original file
         return (FILE_H & occ) >> (f ^ np.uint8(7))
 
@@ -511,7 +448,7 @@ class Board:
         """
         f = i & np.uint8(7)
         occ = DiagonalMasks8[(i // 8) + (i % 8)] & occ # isolate diagonal occupancy
-        occ = (FILE_A * occ) >> np.uint8(56) # map to first rank
+        occ = np.multiply(FILE_A , occ) >> np.uint8(56) # map to first rank
         occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to diagonal
         return DiagonalMasks8[(i // 8) + (i % 8)] & occ
 
@@ -522,23 +459,20 @@ class Board:
         """
         f = i & np.uint8(7)
         occ = AntiDiagonalMasks8[(i // 8) + 7 - (i % 8)] & occ # isolate antidiagonal occupancy
-        occ = (FILE_A * occ) >> np.uint8(56) # map to first rank
+        occ = np.multiply(FILE_A, occ) >> np.uint8(56) # map to first rank
         occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to antidiagonal
         return AntiDiagonalMasks8[(i // 8) + 7 - (i % 8)] & occ
     
     def getMovesB(self, B):
         if self.isWhiteTurn:
-            K = self.WK
             type = 'B'
         else:
-            K = self.BK
             type = 'b'
-
-        i = B&~(B - ONE)
+        i = B&~np.subtract(B,ONE)
         while(i != 0):
             iLocation = trailingZeros(i)
             possibility = self.DAndAntiDMoves(iLocation) & self.NOT_MY_PIECES
-            j = possibility & ~(possibility - ONE)
+            j = possibility & ~np.subtract(possibility,ONE)
             while (j != 0):
                 move = {}
                 index = trailingZeros(j)
@@ -546,31 +480,24 @@ class Board:
                 move['from'] = np.uint64(((iLocation//8)*8)+(iLocation%8))
                 move['to'] = np.uint64(((index//8)*8)+(index%8))
                 move['type'] = type
-                #check if K is in danger
-                # previewBoard = self.doMoveHelper(move, B)
-                # boardAll = self.getModifiedBoard(type, previewBoard)
-                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                # if unsafe & K == 0:
                 self.moves.append(move)
 
                 possibility&=~j
-                j = possibility & ~(possibility - ONE)
+                j = possibility & ~np.subtract(possibility, ONE)
             B &= ~i
-            i = B&~(B - ONE)
+            i = B&~np.subtract(B,ONE)
     
     def getMovesR(self, R):
         if self.isWhiteTurn:
-            K = self.WK
             type = 'R'
         else:
-            K = self.BK
             type = 'r'
 
-        i = R&~(R - ONE)
+        i = R&~np.subtract(R, ONE)
         while(i != 0):
             iLocation = trailingZeros(i)
             possibility = self.HAndVMoves(iLocation) & self.NOT_MY_PIECES
-            j = possibility & ~(possibility - ONE)
+            j = possibility & ~np.subtract(possibility, ONE)
             while (j != 0):
                 move = {}
                 index = trailingZeros(j)
@@ -578,31 +505,24 @@ class Board:
                 move['from'] = np.uint64(((iLocation//8)*8)+(iLocation%8))
                 move['to'] = np.uint64(((index//8)*8)+(index%8))
                 move['type'] = type
-                #check if K is in danger
-                # previewBoard = self.doMoveHelper(move, R)
-                # boardAll = self.getModifiedBoard(type, previewBoard)
-                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                # if unsafe & K == 0:
                 self.moves.append(move)      
 
                 possibility&=~j
-                j = possibility & ~(possibility - ONE)
+                j = possibility & ~np.subtract(possibility, ONE)
             R &= ~i
-            i = R&~(R - ONE)
+            i = R&~np.subtract(R, ONE)
     
     def getMovesQ(self, Q):
         if self.isWhiteTurn:
-            K = self.WK
             type = 'Q'
         else:
-            K = self.BK
             type = 'q'
 
-        i = Q&~(Q - ONE)
+        i = Q&~np.subtract(Q, ONE)
         while(i != 0):
             iLocation = trailingZeros(i)
             possibility = (self.DAndAntiDMoves(iLocation) | self.HAndVMoves(iLocation) )& self.NOT_MY_PIECES
-            j = possibility & ~(possibility - ONE)
+            j = possibility & ~np.subtract(possibility, ONE)
             while (j != 0):
                 move = {}
                 index = trailingZeros(j)
@@ -610,27 +530,19 @@ class Board:
                 move['from'] = np.uint64(((iLocation//8)*8)+(iLocation%8))
                 move['to'] = np.uint64(((index//8)*8)+(index%8))
                 move['type'] = type
-                #check if K is in danger
-                # previewBoard = self.doMoveHelper(move, Q)
-                # boardAll = self.getModifiedBoard(type, previewBoard)
-                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                # if unsafe & K == 0:
                 self.moves.append(move)
 
                 possibility&=~j
-                j = possibility & ~(possibility - ONE)
+                j = possibility & ~np.subtract(possibility, ONE)
             Q &= ~i
-            i = Q&~(Q - ONE)
+            i = Q&~np.subtract(Q, ONE)
 
 
     def getMovesN(self, N):  
         if self.isWhiteTurn:
-            K = self.WK
             type = 'N'
         else:
-            K = self.BK
             type = 'n'  
-
         i = N &~(N - ONE)
         while i != 0:
             iLoc = trailingZeros(i)
@@ -642,7 +554,7 @@ class Board:
                 possibility &= ~FILE_GH & self.NOT_MY_PIECES
             else:
                 possibility &= ~FILE_AB & self.NOT_MY_PIECES
-            j = possibility &~(possibility-ONE)
+            j = possibility &~np.subtract(possibility,ONE)
             while j != 0:
                 index = trailingZeros(j) 
                 move = {}
@@ -650,17 +562,12 @@ class Board:
                 move['from'] = np.uint64(((iLoc//8)*8)+(iLoc%8))
                 move['to'] = np.uint64(((index//8)*8)+(index%8))
                 move['type'] = type
-                #check if K is in danger
-                # previewBoard = self.doMoveHelper(move, N)
-                # boardAll = self.getModifiedBoard(type, previewBoard)
-                # unsafe = self.unsafeFor(self.isWhiteTurn, boardAll, move['to'])
-                # if unsafe & K == 0:
-                self.moves.append(move)      
+                self.moves.append(move) 
 
                 possibility&=~j
-                j=possibility&~(possibility- ONE)
+                j=possibility&~np.subtract(possibility,ONE)
             N &=~i
-            i = N &~(N - ONE)
+            i = N &~np.subtract(N, ONE)
     
     def getMovesK(self, K):
         if self.isWhiteTurn:
@@ -686,7 +593,7 @@ class Board:
             possibility &= ~FILE_GH & self.NOT_MY_PIECES
         else:
             possibility &= ~FILE_AB & self.NOT_MY_PIECES
-        j = possibility &~(possibility-ONE)
+        j = possibility &~np.subtract(possibility,ONE)
         safe = ~self.unsafeFor(isWhiteKing)
 
         if castleRightK and castleK & safe & self.EMPTY == castleK :
@@ -712,9 +619,9 @@ class Board:
                 move['type'] = type
                 self.moves.append(move)
             possibility&=~j
-            j=possibility&~(possibility- ONE)
+            j=possibility&~np.subtract(possibility, ONE)
 
-    def unsafeFor(self, isForWhite: bool, board:np.uint64 = None, destination: np.uint64 = None):
+    def unsafeFor(self, isForWhite: bool):
         """
         Generates a bitboard with all fields that would put the King of the color set through `isFormWhite` in check/danger.
 
@@ -743,20 +650,9 @@ class Board:
             unsafe = (P>>np.uint64(7)) & ~FILE_A 
             unsafe |= (P>>np.uint64(9)) & ~FILE_H
 
-        if destination:
-            P&=~(ONE<<destination)
-            N&=~(ONE<<destination)
-            QB&=~(ONE<<destination)
-            QR&=~(ONE<<destination)
-            K&=~(ONE<<destination)
-        
-        if board:
-            OCCUPIED = board|P|N|QB|QR|K
-        else:
-            OCCUPIED = None
         
         #knight
-        i = N &~(N - ONE)
+        i = N &~np.subtract(N,ONE)
         while i != 0:
             iLoc = trailingZeros(i)
             if iLoc > 18:
@@ -769,25 +665,25 @@ class Board:
                 possibility &= ~FILE_AB
             unsafe |= possibility
             N &=~i
-            i = N & ~(N-ONE)
+            i = N & ~np.subtract(N,ONE)
             
         #(anti)diagonal sliding pieces (bishop & queen)
-        i = QB &~(QB-ONE)
+        i = QB &~np.subtract(QB,ONE)
         while i != 0:
             iLoc = trailingZeros(i)
-            possibility = self.DAndAntiDMoves(iLoc, OCCUPIED)
+            possibility = self.DAndAntiDMoves(iLoc)
             unsafe |= possibility
             QB&=~i
-            i=QB&~(QB-ONE)
+            i=QB&~np.subtract(QB,ONE)
             
         #staight sliding pieces (rook & queen)
-        i = QR &~(QR-ONE)
+        i = QR &~np.subtract(QR,ONE)
         while i != 0:
             iLoc = trailingZeros(i)
-            possibility = self.HAndVMoves(iLoc, OCCUPIED)
+            possibility = self.HAndVMoves(iLoc)
             unsafe |= possibility
             QR&=~i
-            i=QR&~(QR-ONE)
+            i=QR&~np.subtract(QR, ONE)
         
         #king
         iLoc = trailingZeros(K)
@@ -803,27 +699,128 @@ class Board:
         
         return unsafe
 
-    def getModifiedBoard(self, type:str, piece: np.uint64):
-        if type == 'P':
-            return self.WB | self.WK | self.WN | self.WQ | self.WR | piece
-        if type == 'B':
-            return self.WP | self.WK | self.WN | self.WQ | self.WR | piece
-        if type == 'N':
-            return self.WP | self.WB | self.WQ | self.WK | self.WR | piece
-        if type == 'R':
-            return self.WP | self.WB | self.WQ | self.WK | self.WN | piece 
-        if type == 'Q':
-            return self.WP | self.WB | self.WR | self.WK | self.WN | piece
-        if type == 'p':
-            return self.BB | self.BK | self.BN | self.BQ | self.BR | piece
-        if type == 'b':
-            return self.BP | self.BK | self.BN | self.BQ | self.BR | piece
-        if type == 'n':
-            return self.BP | self.BB | self.BQ | self.BK | self.BR | piece
-        if type == 'r':
-            return self.BP | self.BB | self.BQ | self.BK | self.BN | piece
-        if type == 'q':
-            return self.BP | self.BB | self.BR | self.BK | self.BN | piece 
+    def filterMoves(self, moves):
+        newMoves = []
+        for move in moves:
+            type = move['type']
+            if type == 'K' or type == 'k':
+                newMoves.append(move)
+            else:
+                if type == 'P':
+                    newBoard = self.WB | self.WK | self.WN | self.WQ | self.WR | self.doMoveHelper(move, self.WP)
+                elif type == 'N':
+                    newBoard = self.WP | self.WB | self.WQ | self.WK | self.WR | self.doMoveHelper(move, self.WN)
+                elif type == 'B':
+                    newBoard = self.WP | self.WK | self.WN | self.WQ | self.WR | self.doMoveHelper(move, self.WB)
+                elif type == 'R':
+                    newBoard = self.WP | self.WB | self.WQ | self.WK | self.WN | self.doMoveHelper(move, self.WR)
+                elif type == 'Q':
+                    newBoard = self.WP | self.WB | self.WR | self.WK | self.WN | self.doMoveHelper(move, self.WQ)
+                elif type == 'p':
+                    newBoard = self.BB | self.BK | self.BN | self.BQ | self.BR | self.doMoveHelper(move, self.BP)
+                elif type == 'n':
+                    newBoard = self.BP | self.BB | self.BQ | self.BK | self.BR | self.doMoveHelper(move, self.BN)
+                elif type == 'b':
+                    newBoard = self.BP | self.BK | self.BN | self.BQ | self.BR | self.doMoveHelper(move, self.BB)
+                elif type == 'r':
+                    newBoard = self.BP | self.BB | self.BQ | self.BK | self.BN | self.doMoveHelper(move, self.BR)
+                elif type == 'q':
+                    newBoard = self.BP | self.BB | self.BR | self.BK | self.BN | self.doMoveHelper(move, self.BQ)
+                safe = self.unsafeFor2(self.isWhiteTurn, newBoard, move['to'])
+                if safe:
+                    newMoves.append(move)
+        return newMoves
+
+    def unsafeFor2(self, isForWhite: bool, board:np.uint64 = None, destination: np.uint64 = None):
+        if isForWhite:
+            P = self.BP
+            N = self.BN
+            QB = self.BQ|self.BB
+            QR = self.BQ|self.BR
+            K = self.BK
+            myK = self.WK
+            P&=~(ONE<<destination)
+            N&=~(ONE<<destination)
+            QB&=~(ONE<<destination)
+            QR&=~(ONE<<destination)
+            K&=~(ONE<<destination)
+            #black pawn
+            if ((P<<np.uint64(7)) & ~FILE_H)&myK != 0:
+                return False
+            if ((P<<np.uint64(9)) & ~FILE_A)&myK != 0: 
+                return False
+        else:
+            P = self.WP
+            N = self.WN
+            QB = self.WQ|self.WB
+            QR = self.WQ|self.WR
+            K = self.WK
+            myK = self.BK
+
+            P&=~(ONE<<destination)
+            N&=~(ONE<<destination)
+            QB&=~(ONE<<destination)
+            QR&=~(ONE<<destination)
+            K&=~(ONE<<destination)
+            #white pawn
+            if ((P>>7) & int(~FILE_A))&myK !=0:
+                return False
+            if ((P>>9) & int(~FILE_H))&myK != 0:
+                return False
+        
+        OCCUPIED = board|np.uint64(P|N|QB|QR|K)
+        
+        #knight
+        i = N &~np.subtract(N, ONE)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            if iLoc > 18:
+                possibility = KNIGHT_SPAN <<np.uint64(iLoc - 18)
+            else:
+                possibility = KNIGHT_SPAN >> np.uint64(18 - iLoc)
+            if iLoc % 8 < 4:
+                possibility &= ~FILE_GH
+            else:
+                possibility &= ~FILE_AB
+            if np.uint64(possibility) & myK !=0:
+                return False
+            N &=~i
+            i = N & ~np.subtract(N,ONE)
+            
+        #(anti)diagonal sliding pieces (bishop & queen)
+        i = QB &~np.subtract(QB,ONE)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            possibility = self.DAndAntiDMoves(iLoc, OCCUPIED)
+            if possibility & myK !=0:
+                return False
+            QB&=~i
+            i=QB&~np.subtract(QB, ONE)
+            
+        #staight sliding pieces (rook & queen)
+        i = QR &~np.subtract(QR, ONE)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            possibility = self.HAndVMoves(iLoc, OCCUPIED)
+            if possibility & myK != 0:
+                return False
+            QR&=~i
+            i=QR&~np.subtract(QR,ONE)
+        
+        #king
+        iLoc = trailingZeros(K)
+        if iLoc > 9:
+            possibility = (KING_SPAN)<<np.uint64(iLoc-9)
+        else:
+            possibility = (KING_SPAN)>>np.uint64(9 -iLoc)
+        if iLoc % 8 < 4:
+            possibility &=(~FILE_GH)
+        else:
+            possibility &=(~FILE_AB)
+        if np.uint64(possibility) & myK != 0:
+            return False
+        
+        return True
 
     def doMove(self, move):
         undoMove = []
@@ -913,19 +910,17 @@ class Board:
 
         start = move['from']
         end = move['to']
-        if (((BOARD >> start) & ONE) == ONE):
-            BOARD &= ~(ONE << start)
-            BOARD |= (ONE << end)
+        BOARD &= ~(ONE << start)
+        BOARD |= (ONE << end)
         return BOARD
 
     def doMoveHelperKing(self, move, BOARD, undoMove:array = None):
         if not move.get('castle'):
             start = move['from']
             end = move['to']
-            if (((BOARD >> start) & ONE) == ONE):
-                undoMove.append((move['type'], BOARD))
-                BOARD &= ~(ONE << start)
-                BOARD |= (ONE << end)
+            undoMove.append((move['type'], BOARD))
+            BOARD &= ~(ONE << start)
+            BOARD |= (ONE << end)
         else:
             type = move['type']
             castle = move ['castle']
