@@ -32,6 +32,7 @@ class Board:
     EMPTY = np.uint64(0)
     OCCUPIED = np.uint64(0)
 
+    hash = -1
     moves = []
     MOVE_HISTORY = []
     STATE_HISTORY = {} #später transpostion table?
@@ -61,6 +62,7 @@ class Board:
         self.fenString = fenString
         self.initBoard()
         self.convertArraysToBitboards()
+        self.genZobHash()
 
     def initBoard(self):
         if not self.fenString is None:
@@ -184,19 +186,20 @@ class Board:
                 hash ^= self.zobTable[i][10]
             elif (self.BK >> np.uint64(i)) & ONE == ONE:
                 hash ^= self.zobTable[i][11]
-        if self.enPassant in squareNames:
-            hash ^= self.zobEnPass[int(self.enPassant[1])-1]
-        if "K" in self.castleRight:
-            hash ^= self.zobCastle[0]
-        if "Q" in self.castleRight:
-            hash ^= self.zobCastle[1]
-        if "k" in self.castleRight:
-            hash ^= self.zobCastle[2]
-        if "q" in self.castleRight:
-            hash ^= self.zobCastle[3]  
-        if not self.isWhiteTurn:
-            hash ^= self.zobTurn
-        return hash
+        # if self.enPassant in squareNames:
+        #     hash ^= self.zobEnPass[int(self.enPassant[1])-1]
+        # if "K" in self.castleRight:
+        #     hash ^= self.zobCastle[0]
+        # if "Q" in self.castleRight:
+        #     hash ^= self.zobCastle[1]
+        # if "k" in self.castleRight:
+        #     hash ^= self.zobCastle[2]
+        # if "q" in self.castleRight:
+        #     hash ^= self.zobCastle[3]  
+        # if not self.isWhiteTurn:
+        #     hash ^= self.zobTurn
+
+        self.hash = hash
 
 # //////////////////////////////////////////////////////
 #
@@ -205,7 +208,7 @@ class Board:
 # //////////////////////////////////////////////////////
 
     def getMoves(self):
-        self.moves = []
+        self.moves.clear()
         if self.isWhiteTurn:
             return self.possibleMovesW()
         else:
@@ -828,22 +831,28 @@ class Board:
         if type.isupper():
             if type == 'P':
                 self.WP = self.doMoveHelperPawn(move, self.WP, undoMove)
+                self.updateHash(move, 1, undoMove)
             elif type == 'B':
                 self.WB = self.doMoveHelper(move, self.WB, undoMove)
+                self.updateHash(move, 4, undoMove)
             elif type == 'N':
                 self.WN = self.doMoveHelper(move, self.WN, undoMove)
+                self.updateHash(move, 2, undoMove)
             elif type == 'R':
                 self.WR = self.doMoveHelper(move, self.WR, undoMove)
+                self.updateHash(move, 6, undoMove)
                 if self.WR & FILE_A & RANK_1 == 0:
                     self.castleRight = self.castleRight.replace('K','')
                 elif self.WR & FILE_H & RANK_1 == 0:
                     self.castleRight = self.castleRight.replace('Q','')
             elif type == 'K':
                 self.WK = self.doMoveHelperKing(move, self.WK, undoMove)
+                self.updateHash(move, 10, undoMove)
                 undoMove.append(('castle', self.castleRight))
                 self.castleRight = self.castleRight.replace('KQ','')
             elif type == 'Q':
                 self.WQ = self.doMoveHelper(move, self.WQ, undoMove)
+                self.updateHash(move, 8, undoMove)
 
             if move['type'] =='P' and move.get('enPassant'):
                 destination = move['enemy']
@@ -854,22 +863,28 @@ class Board:
         else:
             if type == 'p':
                 self.BP = self.doMoveHelperPawn(move, self.BP, undoMove)
+                self.updateHash(move, 2, undoMove)
             elif type == 'b':
                 self.BB = self.doMoveHelper(move, self.BB, undoMove)
+                self.updateHash(move, 5, undoMove)
             elif type == 'n':
                 self.BN = self.doMoveHelper(move, self.BN, undoMove)
+                self.updateHash(move, 3, undoMove)
             elif type == 'r':
                 self.BR = self.doMoveHelper(move, self.BR, undoMove)
+                self.updateHash(move, 7, undoMove)
                 if self.BR & FILE_A & RANK_8 == 0:
                     self.castleRight = self.castleRight.replace('k','')
                 elif self.WR & FILE_H & RANK_8 == 0:
                     self.castleRight = self.castleRight.replace('q','')
             elif type == 'k':
                 self.BK = self.doMoveHelperKing(move, self.BK, undoMove)
+                self.updateHash(move, 11, undoMove)
                 undoMove.append(('castle', self.castleRight))
                 self.castleRight = self.castleRight.replace('kq','')
             elif type == 'q':
                 self.BQ = self.doMoveHelper(move, self.BQ, undoMove)
+                self.updateHash(move, 9, undoMove)
 
             if move['type'] == 'p' and move.get('enPassant'):
                 destination = move['enemy']
@@ -986,6 +1001,13 @@ class Board:
 
         return BOARD
 
+    def updateHash(self, move, value, undoMove:array):
+        start = move['from']
+        end = move['to']
+        undoMove.append(('hash', self.hash))
+        self.hash ^=self.zobTable[start][value]
+        self.hash ^=self.zobTable[end][value]
+
     def clearDestination(self, isWhite:bool, destination:np.uint64, undoMove:array):
         if isWhite:
             if (((self.BP >> destination) & ONE) == ONE):
@@ -1061,6 +1083,8 @@ class Board:
                 self.castleRight = value
             elif type == 'enPassant':
                 self.enPassant = value
+            elif type == 'hash':
+                self.hash = value
         self.isWhiteTurn = not self.isWhiteTurn        
     
     def printBoard(self):
