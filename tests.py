@@ -60,13 +60,8 @@ firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 #
 # //////////////////////////////////////////////////////
 
-# start = time()
-# # print(alphaBeta(midGame, 2, -10000, 10000, 1,1,1))
-# print(minimax(startGame, 2, 1, 1,1))
-# print(pickRandomBest(bestMoves))
-# print(time() - start)
-# print(bestMoves)
-# testDoUndo(startGame, 1000) #throws errors sometimes! doMove undoMove not fully done.
-# checkMoveGenSpeed(startGame,1000)
-# print(minimax(firstOnTheHill, 4))
-# print(startGame.genZobHash())
+start = time()
+
+#insert test
+
+print(f"\nTest took {time() - start} seconds.\n")
