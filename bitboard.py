@@ -30,7 +30,7 @@ msb_lookup = np.array(
         dtype=np.uint8)
 
 def lsb_bitscan(bb):
-     return lsb_lookup[((bb & -bb) * debruijn) >> np.uint8(58)]
+     return lsb_lookup[np.multiply((bb & -bb), debruijn) >> np.uint8(58)]
 
 def msb_bitscan(bb):
     bb |= bb >> np.uint8(1)
@@ -39,4 +39,4 @@ def msb_bitscan(bb):
     bb |= bb >> np.uint8(8)
     bb |= bb >> np.uint8(16)
     bb |= bb >> np.uint8(32)
-    return msb_lookup[(bb * debruijn) >> np.uint8(58)]
+    return msb_lookup[np.multiply(bb, debruijn) >> np.uint8(58)]
