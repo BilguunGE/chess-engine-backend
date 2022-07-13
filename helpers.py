@@ -1,5 +1,6 @@
 from operator import itemgetter
 from random import randint, random
+from time import time
 import numpy as np
 from math import log2
 
@@ -63,6 +64,12 @@ def printMoves(moves):
     print(result)
     print(len(moves))
     
+def printBestMoves(moves):
+    result = ""
+    for move in moves:
+        result += str(move["move"]["toString"]) + " " + str(move["value"]) + "\n"
+    print(result)
+    
 def getBoardStr(board):
     list = board.convertBitboardsToArray()
     result = ""
@@ -83,6 +90,9 @@ def pickRandom(list):
     return list[randIndex]
 
 def pickRandomBest(list, key='value'):
+    if len(list)==0:
+        print("Can't pick best element. Empty list!")
+        return
     highestVal = max(list, key=itemgetter(key))[key]
     moves = []
     for move in list:
@@ -92,3 +102,6 @@ def pickRandomBest(list, key='value'):
 
 def getMoveToString(move):
     return move["toString"]
+
+def isTimeUp(stopTime):
+    return time() * 1000 - 500 >= stopTime

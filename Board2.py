@@ -39,7 +39,17 @@ class Board:
     zobEnPass = [np.uint64(randint(1,2**64 - 1)) for i in range(8)]
     zobCastle = [np.uint64(randint(1,2**64 - 1)) for i in range(4)]
     zobTurn = np.uint64(randint(1,2**64 - 1))
-    ttable = {}
+    ttable = {} 
+    """
+    Table entries with form:
+    ```
+    12345678738627 : {
+            "score": 123,
+            "depth": 3,
+            "move" : moveObject,
+    }
+    ```
+    """
 
     isWhiteTurn = True
     castleRight = "KQkq"
@@ -888,11 +898,6 @@ class Board:
                 destination = move['to']
                 self.clearDestination(False, destination, undoMove) 
 
-        boardString = getBoardStr(self) #might be replaced with hash function later
-        if boardString in self.STATE_HISTORY:
-            self.STATE_HISTORY[boardString] += 1
-        else:
-            self.STATE_HISTORY[boardString] = 1
 
         self.isWhiteTurn = not self.isWhiteTurn
         undoMove.append(('enPassant', self.enPassant))
@@ -901,6 +906,11 @@ class Board:
         else:
             self.enPassant = '-'
         self.MOVE_HISTORY.append(undoMove)
+        # boardString = getBoardStr(self) #might be replaced with hash function later
+        # if boardString in self.STATE_HISTORY:
+        #     self.STATE_HISTORY[boardString] += 1
+        # else:
+        #     self.STATE_HISTORY[boardString] = 1
 
     def doMoveHelper(self, move, BOARD, undoMove:array = None):
         if undoMove is not None:
@@ -1045,7 +1055,7 @@ class Board:
         if len(self.MOVE_HISTORY) == 0:
             return
         last = self.MOVE_HISTORY.pop()
-        self.STATE_HISTORY[getBoardStr(self)]-=1 #might be replaced with hash function later
+        # self.STATE_HISTORY[getBoardStr(self)]-=1 #might be replaced with hash function later
         
         for type, value in last:
             if type =='P':
@@ -1107,7 +1117,9 @@ class Board:
         queens = 9 * (countSetBits(self.WQ) - countSetBits(self.BQ))
         squarePieceBalance = colorfactor*(queens + rooks + knightsAndBishops + pawns)
         
-        simpleMobility = colorfactor*(len(self.possibleMovesW()) - len(self.possibleMovesB()))
+        movesW = self.possibleMovesW()
+        movesB = self.possibleMovesB()
+        simpleMobility = colorfactor*(len(movesW) - len(movesB))
         
         value = squarePieceBalance + simpleMobility
         
@@ -1153,8 +1165,8 @@ class Board:
         return self.halfmoveClock == 50 # or 100??
 
     def is3Fold(self):
-        for key in self.STATE_HISTORY:
-            if self.STATE_HISTORY[key] >= 3:
-                return True
+        # for key in self.STATE_HISTORY:
+        #     if self.STATE_HISTORY[key] >= 3:
+        #         return True
         return False
 
