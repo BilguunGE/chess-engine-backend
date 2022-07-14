@@ -1,11 +1,12 @@
+from operator import itemgetter
 from random import randint, random
+from time import time
 import numpy as np
-from math import log2
 
 # TODO Move away from string op
-def trailingZeros(s):
-    s = np.binary_repr(s,width=64)
-    return len(s) - len(s.rstrip('0'))
+def trailingZeros(v):
+     v = int(v)
+     return (v & -v).bit_length() - 1
 
 # TODO buggy!
 # def countTrailingZeros(v):
@@ -16,7 +17,7 @@ def trailingZeros(s):
 
 def strBBtoBB(str):
     bbStr = str.replace("\n","").replace(" ","")
-    return np.uint64(int(bbStr,2))
+    return int(bbStr,2)
     
 def printBits(num, title=''):
     print()
@@ -62,6 +63,12 @@ def printMoves(moves):
     print(result)
     print(len(moves))
     
+def printBestMoves(moves):
+    result = ""
+    for move in moves:
+        result += str(move["move"]["toString"]) + " " + str(move["value"]) + "\n"
+    print(result)
+    
 def getBoardStr(board):
     list = board.convertBitboardsToArray()
     result = ""
@@ -80,3 +87,31 @@ def countSetBits(number):
 def pickRandom(list):
     randIndex = randint(0, len(list)-1)
     return list[randIndex]
+
+def getBestMoves(list, key='value'):
+    if len(list)==0:
+        print("Can't pick best element. Empty list!")
+        return
+    highestVal = max(list, key=itemgetter(key))[key]
+    moves = []
+    for move in list:
+        if move["value"] == highestVal:
+            moves.append(move["move"]["toString"])
+    return moves
+
+def pickRandomBest(list, key='value'):
+    if len(list)==0:
+        print("Can't pick best element. Empty list!")
+        return
+    highestVal = max(list, key=itemgetter(key))[key]
+    moves = []
+    for move in list:
+        if move["value"] == highestVal:
+            moves.append(move)
+    return pickRandom(moves)
+
+def getMoveToString(move):
+    return move["toString"]
+
+def isTimeUp(stopTime):
+    return time() * 1000 - 500 >= stopTime
