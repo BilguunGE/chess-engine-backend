@@ -19,6 +19,16 @@ def testMoveGenSpeed(board, iterations):
         i +=1
     print(str((sum(list)*1000)/len(list))+"ms")
     
+def testEvaluationSpeed(board, iterations):
+    i = 0 
+    list =[]
+    while i < iterations:
+        start = time()
+        board.evaluate()
+        list.append(time()-start)
+        i+=1
+    print(sum(list)/1000)
+    
     
 def testAlphaBeta(board, depth, stopTime, iterations):
     i = 0
@@ -137,6 +147,6 @@ firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 
 start = time()
 
-mst3([startGame,midGame,endGame],3, 10)
+# mst3([startGame,midGame,endGame],3, 10)
 
 print(f"\nTest took {time() - start} seconds.\n")
