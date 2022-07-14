@@ -18,15 +18,12 @@ def initBoard():
 def getMoves():
     return route.getMoves()
 
-@app.route('/alphabeta', methods=['GET'])
+@app.route('/alphabeta', methods=['POST'])
 @cross_origin()
 def alphabeta():
-    return route.alphaBeta()
-
-
-@app.route('/doMove', methods=['POST'])
-@cross_origin()
-def doMove():
-    move = request.json['move']
-    return route.doMove(move)
-
+    print("received request")
+    DEPTH = int(request.json['depth'])
+    ALPHA = int(request.json['alpha'])
+    BETA = int(request.json['beta'])
+    STOPTIME = int(request.json['stopTime'])
+    return route.alphaBetaMove(DEPTH, ALPHA, BETA, STOPTIME)

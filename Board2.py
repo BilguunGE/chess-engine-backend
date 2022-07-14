@@ -1,0 +1,1172 @@
+from array import array
+from random import *
+import re
+import numpy as np
+from helpers import *
+from constants import *
+from copy import copy
+
+
+class Board:
+    WP = 0
+    WN = 0
+    WB = 0
+    WR = 0
+    WQ = 0
+    WK = 0
+    BP = 0
+    BN = 0
+    BB = 0
+    BR = 0
+    BQ = 0
+    BK = 0
+    
+    BLACK_PIECES = 0
+    WHITE_PIECES = 0
+
+    MY_PIECES = 0
+    NOT_MY_PIECES =  0
+
+    EMPTY = 0
+    OCCUPIED = 0
+
+    hash = -1
+    moves = []
+    MOVE_HISTORY = []
+    STATE_HISTORY = {} #später transpostion table?
+    zobTable = [[(randint(1,2**64 - 1)) for i in range(12)]for j in range(64)]
+    zobEnPass = [(randint(1,2**64 - 1)) for i in range(8)]
+    zobCastle = [(randint(1,2**64 - 1)) for i in range(4)]
+    zobTurn = (randint(1,2**64 - 1))
+    ttable = {} 
+    """
+    Table entries with form:
+    ```
+    12345678738627 : {
+            "score": 123,
+            "depth": 3,
+            "move" : moveObject,
+    }
+    ```
+    """
+
+    isWhiteTurn = True
+    castleRight = "KQkq"
+    enPassant = "-"
+    halfmoveClock = 0
+    fullmoveCount = 1
+    chessBoard = [
+        ["r", "n", "b", "q", "k", "b", "n", "r"],
+        ["p", "p", "p", "p", "p", "p", "p", "p"],
+        ["", "", "", "", "", "", "", ""],
+        ["", "", "", "", "", "", "", ""],
+        ["", "", "", "", "", "", "", ""],
+        ["", "", "", "", "", "", "", ""],
+        ["P", "P", "P", "P", "P", "P", "P", "P"],
+        ["R", "N", "B", "Q", "K", "B", "N", "R"],
+    ]
+
+    def __init__(self, fenString=None):
+        self.fenString = fenString
+        self.initBoard()
+        self.convertArraysToBitboards()
+        self.genZobHash()
+
+    def initBoard(self):
+        if not self.fenString is None:
+            splittedFEN = self.fenString.split(' ')
+            self.chessBoard = self.parseFEN(splittedFEN[0])
+            self.isWhiteTurn = splittedFEN[1] == "w"
+            self.castleRight = splittedFEN[2]
+            self.enPassant = splittedFEN[3]
+            self.halfmoveClock = int(splittedFEN[4])
+            self.fullmoveCount = int(splittedFEN[5])
+
+    def parseFEN(self, boardString):
+        board = []
+        rows = boardString.split("/")
+        for row in rows:
+            rowContent = []
+            for cell in row:
+                if re.match('\d', cell):
+                    for n in range(int(cell)):
+                        rowContent.append("")
+                else:
+                    rowContent.append(cell)
+            board.append(rowContent)
+        return board
+        
+
+    def convertArraysToBitboards(self):
+        for i in range(64):
+            binary = ZERO_STRING[i+1:] + "1" + ZERO_STRING[0:i]
+            num = (int(binary, 2))
+            row = (i // 8)
+            col = i % 8
+            figure = self.chessBoard[row][col]
+            if figure == "P":
+                self.WP += num
+            elif figure == "N":
+                self.WN += num
+            elif figure == "B":
+                self.WB += num
+            elif figure == "R":
+                self.WR += num
+            elif figure == "Q":
+              self.WQ += num
+            elif figure == "K":
+              self.WK += num
+            elif figure == "p":
+              self.BP += num
+            elif figure == "n":
+              self.BN += num
+            elif figure == "b":
+              self.BB += num
+            elif figure == "r":
+              self.BR += num
+            elif figure == "q":
+              self.BQ += num
+            elif figure == "k":
+              self.BK += num
+
+    def convertBitboardsToArray(self):
+        newChessBoard = []
+        for rowI in range(8):
+            cellContent = []
+            for cellJ in range(8):
+                cellContent.append('')
+            newChessBoard.append(cellContent)
+
+        for i in range(64):
+            row = (i // 8)
+            col = i % 8
+            if (self.WP >> i) & 1 == 1:
+                newChessBoard[row][col] = "P"
+            elif (self.WN >> i) & 1 == 1:
+                newChessBoard[row][col] = "N"
+            elif (self.WB >> i) & 1 == 1:
+                newChessBoard[row][col] = "B"
+            elif (self.WR >> i) & 1 == 1:
+                newChessBoard[row][col] = "R"
+            elif (self.WQ >> i) & 1 == 1:
+                newChessBoard[row][col] = "Q"
+            elif (self.WK >> i) & 1 == 1:
+                newChessBoard[row][col] = "K"
+            elif (self.BP >> i) & 1 == 1:
+                newChessBoard[row][col] = "p"
+            elif (self.BN >> i) & 1 == 1:
+                newChessBoard[row][col] = "n"
+            elif (self.BB >> i) & 1 == 1:
+                newChessBoard[row][col] = "b"
+            elif (self.BR >> i) & 1 == 1:
+                newChessBoard[row][col] = "r"
+            elif (self.BQ >> i) & 1 == 1:
+                newChessBoard[row][col] = "q"
+            elif (self.BK >> i) & 1 == 1:
+                newChessBoard[row][col] = "k"
+
+        return newChessBoard
+    
+    def genZobHash(self):
+        hash = 0
+        for i in range(64):
+            if (self.WP >> i) & 1 == 1:
+                hash ^= self.zobTable[i][0]
+            elif (self.BP >> i) & 1 == 1:
+                hash ^= self.zobTable[i][1]
+            elif (self.WN >> i) & 1 == 1:
+                hash ^= self.zobTable[i][2]
+            elif (self.BN >> i) & 1 == 1:
+                hash ^= self.zobTable[i][3]
+            elif (self.WB >> i) & 1 == 1:
+                hash ^= self.zobTable[i][4]
+            elif (self.BB >> i) & 1 == 1:
+                hash ^= self.zobTable[i][5]
+            elif (self.WR >> i) & 1 == 1:
+                hash ^= self.zobTable[i][6]
+            elif (self.BR >> i) & 1 == 1:
+                hash ^= self.zobTable[i][7]
+            elif (self.WQ >> i) & 1 == 1:
+                hash ^= self.zobTable[i][8]
+            elif (self.BQ >> i) & 1 == 1:
+                hash ^= self.zobTable[i][9]
+            elif (self.WK >> i) & 1 == 1:
+                hash ^= self.zobTable[i][10]
+            elif (self.BK >> i) & 1 == 1:
+                hash ^= self.zobTable[i][11]
+        # if self.enPassant in squareNames:
+        #     hash ^= self.zobEnPass[int(self.enPassant[1])-1]
+        # if "K" in self.castleRight:
+        #     hash ^= self.zobCastle[0]
+        # if "Q" in self.castleRight:
+        #     hash ^= self.zobCastle[1]
+        # if "k" in self.castleRight:
+        #     hash ^= self.zobCastle[2]
+        # if "q" in self.castleRight:
+        #     hash ^= self.zobCastle[3]  
+        if not self.isWhiteTurn:
+            hash ^= self.zobTurn
+
+        self.hash = hash
+        return hash
+
+# //////////////////////////////////////////////////////
+#
+#                    Move Generator
+#
+# //////////////////////////////////////////////////////
+
+    def getMoves(self):
+        self.moves.clear()
+        if self.isWhiteTurn:
+            return self.filterMoves(self.possibleMovesW())
+        else:
+            return self.filterMoves(self.possibleMovesB())
+
+    def possibleMovesW(self):
+        #added BK to avoid illegal capture
+        self.NOT_MY_PIECES = ~(self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BK)
+        #omitted WK to avoid illegal capture
+        self.MY_PIECES = self.WP|self.WN|self.WB|self.WR|self.WQ
+        self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
+        self.EMPTY=~self.OCCUPIED
+        self.getMovesB(self.WB)
+        self.getMovesN(self.WN)
+        self.getMovesQ(self.WQ)
+        self.getMovesR(self.WR)
+        self.getMovesK(self.WK)
+        self.getMovesP()
+        return self.moves
+
+        
+    
+    def possibleMovesB(self):
+        #added WK to avoid illegal capture
+        self.NOT_MY_PIECES=~(self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK|self.WK)
+        #omitted BK to avoid illegal capture
+        self.MY_PIECES=self.BP|self.BN|self.BB|self.BR|self.BQ
+        self.OCCUPIED=self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK
+        self.EMPTY=~self.OCCUPIED
+        self.getMovesB(self.BB)
+        self.getMovesN(self.BN)
+        self.getMovesQ(self.BQ)
+        self.getMovesR(self.BR)
+        self.getMovesK(self.BK)
+        self.getMovesP()
+        return self.moves 
+
+    
+    def getMovesP(self):
+        # exluding black king, because he can't be eaten
+        self.BLACK_PIECES = (self.BP | self.BN | self.BB | self.BR | self.BQ)
+        
+        # same here
+        self.WHITE_PIECES = self.WP | self.WN | self.WB | self.WR | self.WQ
+
+
+        # beat right
+        if self.isWhiteTurn:
+            PAWN_MOVES = (self.WP >> 7) & self.BLACK_PIECES & int(~FILE_A)
+            PAWN_MOVES_PROMO = (self.WP >> 7) & self.BLACK_PIECES & int(RANK_8 & ~FILE_A)
+            color = 1
+            type = 'P' 
+        else: 
+            PAWN_MOVES = (self.BP << 7) & self.WHITE_PIECES  & int(~FILE_H)
+            PAWN_MOVES_PROMO = (self.BP << 7) & self.WHITE_PIECES & int(RANK_1 & ~FILE_H)
+            color = -1
+            type = 'p'
+
+        for i in range(64):
+            isPromo = False 
+            move = {}
+            if (PAWN_MOVES_PROMO >> i) & 1 == 1:
+                move['isPromo'] = True
+                isPromo = True
+            if (PAWN_MOVES >> i) & 1  == 1 :
+                move['toString'] = makeField((i//8)+(color*1), (i % 8)-(color*1)) + "x" + makeField((i//8), i % 8)
+                move['from'] = (((i//8)+(color*1))*8+((i % 8)-(color*1)))
+                move['to'] = ((i//8)*8 + (i % 8))
+                move['type'] = type
+                if isPromo:
+                    self.promoHelper(self.isWhiteTurn, move)
+                else:
+                    self.moves.append(move)
+
+        # beat left
+        if self.isWhiteTurn:
+            PAWN_MOVES = (self.WP >> 9) & self.BLACK_PIECES  & int(~FILE_H)
+            PAWN_MOVES_PROMO = (self.WP >> 9) & self.BLACK_PIECES & int(RANK_8 & ~FILE_H)
+        else:
+            PAWN_MOVES = (self.BP << 9) & self.WHITE_PIECES  & int(~FILE_A)
+            PAWN_MOVES_PROMO = (self.BP << 9) & self.WHITE_PIECES & int(RANK_1 & ~FILE_A)
+
+        for i in range(64):
+            move = {}
+            isPromo = False
+            if (PAWN_MOVES_PROMO >> i) & 1 == 1:
+                move['isPromo'] = True
+                isPromo = True
+            if (PAWN_MOVES >> i) & 1 == 1:
+                move['toString'] = makeField((i//8)+(color*1), (i % 8)+(color*1)) + "x"+makeField((i//8), i % 8)
+                move['from'] = (((i//8)+(color*1))*8+((i % 8)-(color*1))) 
+                move['to'] = ((i//8)*8+(i % 8))
+                move['type'] = type
+                if isPromo:
+                    self.promoHelper(self.isWhiteTurn, move)
+                else:
+                    self.moves.append(move)
+
+        # move 1 forward
+        if self.isWhiteTurn:
+            PAWN_MOVES = (self.WP >> 8) & self.EMPTY 
+            PAWN_MOVES_PROMO = (self.WP >> 8) & self.EMPTY & int(RANK_8)
+        else:
+            PAWN_MOVES = (self.BP << 8) & self.EMPTY
+            PAWN_MOVES_PROMO = (self.BP << 8) & self.EMPTY & int(RANK_1)
+
+        for i in range(64):
+            move = {}
+            isPromo = False
+            if (PAWN_MOVES_PROMO >> i) & 1 == 1:
+                move['isPromo'] = True
+                isPromo = True
+            if (PAWN_MOVES >> i) & 1 == 1:
+                move['toString'] = makeField((i//8)+(color*1), (i % 8)) + "-"+makeField((i//8), i % 8)
+                move['from'] = (((i//8)+(color*1))*8+(i % 8))
+                move['to'] = ((i//8)*8+(i%8))
+                move['type'] = type
+                if isPromo:
+                    self.promoHelper(self.isWhiteTurn, move)
+                else:
+                    self.moves.append(move)
+
+        # move 2 forward
+        if self.isWhiteTurn:
+            PAWN_MOVES = (self.WP >> 16) & self.EMPTY & (self.EMPTY >> 8) & int(RANK_4)
+        else:
+            PAWN_MOVES = (self.BP << 16) & self.EMPTY & (self.EMPTY << 8) & int(RANK_5)
+
+        for i in range(64):
+            move = {}
+            if (PAWN_MOVES >> i) & 1 == 1:
+                move['toString'] = makeField((i//8)+(color*2), (i % 8)) + "-"+makeField((i//8), i % 8)
+                move['from'] = (((i//8)+(color*2))*8+(i%8))
+                move['to'] = ((i//8)*8+(i % 8))
+                move['type'] = type
+                move['double'] = makeField((i//8)+(color*1), i % 8)
+                self.moves.append(move)
+
+        if self.enPassant != '-':
+            RANK = FileMasks8[self.enPassant[0]]
+
+            # en passant right
+            if self.isWhiteTurn:
+                PAWN_MOVES = (self.WP << 1) & self.BP & int(RANK_5 & ~FILE_A & RANK)
+            else:
+                PAWN_MOVES = (self.BP >> 1) & self.WP & int(RANK_4 & ~FILE_H & RANK)
+            
+            for i in range(64):
+                move = {}
+                if (PAWN_MOVES >> i) & 1 == 1:
+                    move['toString'] = makeField((i//8), i % 8-(color*1))+'x'+makeField((i//8)-(color*1), i % 8)
+                    move['from'] = (((i//8)*8)+(i%8-(color*1)))
+                    move['to'] = (((i//8)-(color*1))*8+(i % 8))
+                    move['type'] = type
+                    move['enPassant'] = True
+                    if self.isWhiteTurn:
+                        destination = (((((i//8)-(color*1))+1)*8)+(i % 8))
+                    else:
+                        destination = (((((i//8)-(color*1))-1)*8)+(i % 8))
+                    move['enemy'] = destination
+                    self.moves.append(move)
+
+            # en passant left
+            if self.isWhiteTurn:
+                PAWN_MOVES = (self.WP >> 1) & self.BP & int(RANK_5 & ~FILE_H & RANK)
+            else:
+                PAWN_MOVES = (self.BP << 1) & self.WP & int(RANK_4 & ~FILE_A & RANK)
+
+            for i in range(64):
+                move = {}
+                if (PAWN_MOVES >> i) & 1 == 1:
+                    move['toString'] = makeField((i//8), i % 8+(color*1))+'x'+ makeField((i//8) -(color*1), i % 8)
+                    move['from'] = (((i//8)*8)+(i % 8+(color*1)))
+                    move['to'] = (((i//8)-(color*1))*8+(i % 8))
+                    move['type'] = type
+                    move['enPassant'] = True
+                    if self.isWhiteTurn:
+                        destination = (((((i//8)-(color*1))+1)*8)+(i % 8))
+                    else:
+                        destination = (((((i//8)-(color*1))-1)*8)+(i % 8))
+                    move['enemy'] = destination
+                    self.moves.append(move)
+
+    
+    def promoHelper(self, isWhiteTurn:bool ,move):
+        moveR = copy(move)
+        moveR['promoType'] = 'R' if isWhiteTurn else 'r'
+        self.moves.append(moveR)
+        moveQ = copy(move)
+        moveQ['promoType'] = 'Q' if isWhiteTurn else 'q'
+        self.moves.append(moveQ)
+        moveB = copy(move)
+        moveB['promoType'] = 'B' if isWhiteTurn else 'b'
+        self.moves.append(moveB)
+        moveN = copy(move)
+        moveN['promoType'] = 'N' if isWhiteTurn else 'n'
+        self.moves.append(moveN)
+
+    def HAndVMoves(self, s, OCCUPIED_CUSTOM = None):
+        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else np.uint(self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
+        return self.get_rank_moves_bb(s, OCCUPIED) | self.get_file_moves_bb(s, OCCUPIED)
+    
+    def DAndAntiDMoves(self, s:int, OCCUPIED_CUSTOM = None):
+        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else np.uint(self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
+        return self.get_diag_moves_bb(s, OCCUPIED) | self.get_antidiag_moves_bb(s, OCCUPIED)
+
+    def get_rank_moves_bb(self, i, occ):
+        """
+        i is index of square
+        occ is the combined occupancy of the board
+        """
+        f = i & 7
+        occ = RankMasks8[i//8] & occ # isolate rank occupancy
+        occ = np.multiply(FILE_A, occ) >> np.uint8(56) # map to first rank
+        occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to rank
+        return int(RankMasks8[i//8] & occ)
+
+    def get_file_moves_bb(self, i, occ):
+        """
+        i is index of square
+        occ is the combined occupancy of the board
+        """
+        f = i & 7
+        # Shift to A file
+        occ = FILE_A & occ >> np.uint8(f)
+        # Map occupancy and index to first rank
+        occ = np.multiply(A1H8_DIAG, occ) >> np.uint8(56)
+        first_rank_index = (i ^ 56) >> 3
+        # Lookup moveset and map back to H file
+        occ = np.multiply(A1H8_DIAG, FIRST_RANK_MOVES[first_rank_index][occ])
+        # Isolate H file and shift back to original file
+        return int(FILE_H & occ) >> (f ^ 7)
+
+    def get_diag_moves_bb(self, i, occ):
+        """
+        i is index of square
+        occ is the combined occupancy of the board
+        """
+        f = i & 7
+        occ = DiagonalMasks8[(i // 8) + (i % 8)] & occ # isolate diagonal occupancy
+        occ = np.multiply(FILE_A , occ) >> np.uint8(56) # map to first rank
+        occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to diagonal
+        return int(DiagonalMasks8[(i // 8) + (i % 8)] & occ)
+
+    def get_antidiag_moves_bb(self, i, occ):
+        """
+        i is index of square
+        occ is the combined occupancy of the board
+        """
+        f = i & 7
+        occ = AntiDiagonalMasks8[(i // 8) + 7 - (i % 8)] & occ # isolate antidiagonal occupancy
+        occ = np.multiply(FILE_A, occ) >> np.uint8(56) # map to first rank
+        occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to antidiagonal
+        return int(AntiDiagonalMasks8[(i // 8) + 7 - (i % 8)] & occ)
+    
+    def getMovesB(self, B):
+        if self.isWhiteTurn:
+            type = 'B'
+        else:
+            type = 'b'
+        i = B&~(B-1)
+        while(i != 0):
+            iLocation = trailingZeros(i)
+            possibility = int(self.DAndAntiDMoves(iLocation) & self.NOT_MY_PIECES)
+            j = possibility & ~(possibility-1)
+            while (j != 0):
+                move = {}
+                index = trailingZeros(j)
+                move['toString'] = "B"+makeField((iLocation//8),iLocation%8)+'-'+makeField((index//8),index%8)
+                move['from'] = (((iLocation//8)*8)+(iLocation%8))
+                move['to'] = (((index//8)*8)+(index%8))
+                move['type'] = type
+                self.moves.append(move)
+
+                possibility&=~j
+                j = possibility & ~(possibility-1)
+            B &= ~i
+            i = B&~(B-1)
+    
+    def getMovesR(self, R):
+        if self.isWhiteTurn:
+            type = 'R'
+        else:
+            type = 'r'
+        i = R&~(R-1)
+        while(i != 0):
+            iLocation = trailingZeros(i)
+            possibility = int(self.HAndVMoves(iLocation) & self.NOT_MY_PIECES)
+            j = possibility & ~(possibility-1)
+            while (j != 0):
+                move = {}
+                index = trailingZeros(j)
+                move['toString'] = "R"+makeField((iLocation//8),iLocation%8)+'-'+makeField((index//8),index%8)
+                move['from'] = (((iLocation//8)*8)+(iLocation%8))
+                move['to'] = (((index//8)*8)+(index%8))
+                move['type'] = type
+                self.moves.append(move)      
+
+                possibility&=~j
+                j = possibility & ~(possibility-1)
+            R &= ~i
+            i = R&~(R-1)
+    
+    def getMovesQ(self, Q):
+        if self.isWhiteTurn:
+            type = 'Q'
+        else:
+            type = 'q'
+        i = Q&~(Q-1)
+        while(i != 0):
+            iLocation = trailingZeros(i)
+            possibility = int((self.DAndAntiDMoves(iLocation) | self.HAndVMoves(iLocation) )& self.NOT_MY_PIECES)
+            j = possibility & ~(possibility-1)
+            while (j != 0):
+                move = {}
+                index = trailingZeros(j)
+                move['toString'] = "Q"+makeField((iLocation//8),iLocation%8)+'-'+makeField((index//8),index%8)
+                move['from'] = (((iLocation//8)*8)+(iLocation%8))
+                move['to'] = (((index//8)*8)+(index%8))
+                move['type'] = type
+                self.moves.append(move)
+
+                possibility&=~j
+                j = possibility & ~(possibility-1)
+            Q &= ~i
+            i = Q&~(Q-1)
+
+
+    def getMovesN(self, N):  
+        if self.isWhiteTurn:
+            type = 'N'
+        else:
+            type = 'n'  
+        i = N &~(N - 1)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            if iLoc >  18:
+                possibility = int(KNIGHT_SPAN) << (iLoc-18)
+            else:
+                possibility = int(KNIGHT_SPAN) >> (18 - iLoc)
+            if iLoc%8 < 4:
+                possibility &= int(~FILE_GH) & self.NOT_MY_PIECES
+            else:
+                possibility &= int(~FILE_AB) & self.NOT_MY_PIECES
+            j = possibility &~(possibility-1)
+            while j != 0:
+                index = trailingZeros(j) 
+                move = {}
+                move['toString'] = "N"+makeField((iLoc//8),iLoc%8)+'-'+makeField((index//8),index%8)
+                move['from'] = (((iLoc//8)*8)+(iLoc%8))
+                move['to'] = (((index//8)*8)+(index%8))
+                move['type'] = type
+                self.moves.append(move) 
+
+                possibility&=~j
+                j=possibility&~(possibility-1)
+            N &=~i
+            i = N &~(N-1)
+    
+    def getMovesK(self, K):
+        if self.isWhiteTurn:
+            type = 'K'
+            castleRightK = 'K' in self.castleRight
+            castleRightQ = 'Q' in self.castleRight
+            castleK = CASTLE_K
+            castleQ = CASTLE_Q
+        else:
+            type = 'k'
+            castleRightK = 'k' in self.castleRight
+            castleRightQ = 'q' in self.castleRight
+            castleK = CASTLE_k
+            castleQ = CASTLE_q
+
+        isWhiteKing = K & self.WK > 0 
+        iLoc = trailingZeros(K)
+        if iLoc >  9:
+            possibility = int(KING_SPAN) << (iLoc-9)
+        else:
+            possibility = int(KING_SPAN) >> (9 - iLoc)
+        if iLoc%8 < 4:
+            possibility &= int(~FILE_GH) & self.NOT_MY_PIECES
+        else:
+            possibility &= int(~FILE_AB) & self.NOT_MY_PIECES
+        j = possibility &~(possibility-1)
+        safe = int(~self.unsafeFor(isWhiteKing))
+
+        if castleRightK and int(castleK) & safe & self.EMPTY == int(castleK) :
+            move = {}
+            move['toString'] = "0-0"
+            move['type'] = type
+            move['castle'] = "k"
+            self.moves.append(move)
+        if castleRightQ and int(castleQ) & safe & self.EMPTY == int(castleQ) :
+            move = {}
+            move['toString'] = "0-0-0"
+            move['type'] = type
+            move['castle'] = "q"
+            self.moves.append(move)
+            
+        while j != 0:
+            if j & safe != 0: #filters out unsafe fields
+                index = trailingZeros(j) 
+                move = {}
+                move['toString'] = "K"+makeField((iLoc//8),iLoc%8)+'-'+makeField((index//8),index%8)
+                move['from'] = (((iLoc//8)*8)+(iLoc%8))
+                move['to'] = (((index//8)*8)+(index%8))
+                move['type'] = type
+                self.moves.append(move)
+            possibility&=~j
+            j=possibility&~(possibility-1)
+
+    def unsafeFor(self, isForWhite: bool):
+        """
+        Generates a bitboard with all fields that would put the King of the color set through `isFormWhite` in check/danger.
+
+        Args:
+            `isForWhite` (bool): if `True` bitboard shows fields that are not safe for white pieces, if `False` then same for black 
+
+        Returns:
+            bitboard with unsafe fields for given color
+        """
+        if isForWhite:
+            P = self.BP
+            N = self.BN
+            QB = self.BQ|self.BB
+            QR = self.BQ|self.BR
+            K = self.BK
+            #black pawn
+            unsafe = (P<<7) & int(~FILE_H )
+            unsafe |= (P<<9) & int(~FILE_A)
+        else:
+            P = self.WP
+            N = self.WN
+            QB = self.WQ|self.WB
+            QR = self.WQ|self.WR
+            K = self.WK
+            #white pawn
+            unsafe = (P>>7) & int(~FILE_A )
+            unsafe |= (P>>9) & int(~FILE_H)
+
+        
+        #knight
+        i = N &~(N-1)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            if iLoc > 18:
+                possibility = int(KNIGHT_SPAN) << (iLoc - 18)
+            else:
+                possibility = int(KNIGHT_SPAN) >> (18 - iLoc)
+            if iLoc % 8 < 4:
+                possibility &= int(~FILE_GH)
+            else:
+                possibility &= int(~FILE_AB)
+            unsafe |= possibility
+            N &=~i
+            i = N & ~(N-1)
+            
+        #(anti)diagonal sliding pieces (bishop & queen)
+        i = QB &~(QB-1)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            possibility = self.DAndAntiDMoves(iLoc)
+            unsafe |= int(possibility)
+            QB&=~i
+            i=QB&~(QB-1)
+            
+        #staight sliding pieces (rook & queen)
+        i = QR &~(QR-1)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            possibility = self.HAndVMoves(iLoc)
+            unsafe |= int(possibility)
+            QR&=~i
+            i=QR&~(QR-1)
+        
+        #king
+        iLoc = trailingZeros(K)
+        if iLoc > 9:
+            possibility = int(KING_SPAN)<<(iLoc-9)
+        else:
+            possibility = int(KING_SPAN)>>(9 -iLoc)
+        if iLoc % 8 < 4:
+            possibility &=int(~FILE_GH)
+        else:
+            possibility &=int(~FILE_AB)
+        unsafe |= possibility
+        
+        return unsafe
+
+    def filterMoves(self, moves):
+        newMoves = []
+        for move in moves:
+            type = move['type']
+            if type == 'K' or type == 'k':
+                newMoves.append(move)
+            else:
+                if type == 'P':
+                    newBoard = self.WB | self.WK | self.WN | self.WQ | self.WR | self.doMoveHelper(move, self.WP)
+                elif type == 'N':
+                    newBoard = self.WP | self.WB | self.WQ | self.WK | self.WR | self.doMoveHelper(move, self.WN)
+                elif type == 'B':
+                    newBoard = self.WP | self.WK | self.WN | self.WQ | self.WR | self.doMoveHelper(move, self.WB)
+                elif type == 'R':
+                    newBoard = self.WP | self.WB | self.WQ | self.WK | self.WN | self.doMoveHelper(move, self.WR)
+                elif type == 'Q':
+                    newBoard = self.WP | self.WB | self.WR | self.WK | self.WN | self.doMoveHelper(move, self.WQ)
+                elif type == 'p':
+                    newBoard = self.BB | self.BK | self.BN | self.BQ | self.BR | self.doMoveHelper(move, self.BP)
+                elif type == 'n':
+                    newBoard = self.BP | self.BB | self.BQ | self.BK | self.BR | self.doMoveHelper(move, self.BN)
+                elif type == 'b':
+                    newBoard = self.BP | self.BK | self.BN | self.BQ | self.BR | self.doMoveHelper(move, self.BB)
+                elif type == 'r':
+                    newBoard = self.BP | self.BB | self.BQ | self.BK | self.BN | self.doMoveHelper(move, self.BR)
+                elif type == 'q':
+                    newBoard = self.BP | self.BB | self.BR | self.BK | self.BN | self.doMoveHelper(move, self.BQ)
+                safe = self.unsafeFor2(self.isWhiteTurn, newBoard, move['to'])
+                if safe:
+                    newMoves.append(move)
+        return newMoves
+
+    def unsafeFor2(self, isForWhite: bool, board = None, destination = None):
+        if isForWhite:
+            P = (self.BP)
+            N = (self.BN)
+            QB = (self.BQ|self.BB)
+            QR = (self.BQ|self.BR)
+            K = (self.BK)
+            myK = (self.WK)
+            dest = (1<<destination)
+            P&=~dest
+            N&=~dest
+            QB&=~dest
+            QR&=~dest
+            K&=~dest
+            #black pawn
+            if ((P<<7) & int(~FILE_H))&myK != 0:
+                return False
+            if ((P<<9) & int(~FILE_A))&myK != 0: 
+                return False
+        else:
+            P = (self.WP)
+            N = (self.WN)
+            QB = (self.WQ|self.WB)
+            QR = (self.WQ|self.WR)
+            K = (self.WK)
+            myK = self.BK
+            P&=~(1<<destination)
+            N&=~(1<<destination)
+            QB&=~(1<<destination)
+            QR&=~(1<<destination)
+            K&=~(1<<destination)
+            #white pawn
+            if ((P>>7) & int(~FILE_A))&myK !=0:
+                return False
+            if ((P>>9) & int(~FILE_H))&myK != 0:
+                return False
+        
+        OCCUPIED = np.uint(board|P|N|QB|QR|K)
+        
+        #knight
+        i = N &~(N-1)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            if iLoc > 18:
+                possibility = int(KNIGHT_SPAN) <<(iLoc - 18)
+            else:
+                possibility = int(KNIGHT_SPAN) >> (18 - iLoc)
+            if iLoc % 8 < 4:
+                possibility &= int(~FILE_GH)
+            else:
+                possibility &= int(~FILE_AB)
+            if (possibility) & myK !=0:
+                return False
+            N &=~i
+            i = N & ~(N-1)
+            
+        #(anti)diagonal sliding pieces (bishop & queen)
+        i = QB &~(QB-1)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            possibility = self.DAndAntiDMoves(iLoc, OCCUPIED)
+            if int(possibility) & myK !=0:
+                return False
+            QB&=~i
+            i=QB&~(QB-1)
+            
+        #staight sliding pieces (rook & queen)
+        i = QR &~(QR-1)
+        while i != 0:
+            iLoc = trailingZeros(i)
+            possibility = self.HAndVMoves(iLoc, OCCUPIED)
+            if int(possibility) & myK != 0:
+                return False
+            QR&=~i
+            i=QR&~(QR-1)
+        
+        #king
+        iLoc = trailingZeros(K)
+        if iLoc > 9:
+            possibility = int(KING_SPAN)<<(iLoc-9)
+        else:
+            possibility = int(KING_SPAN)>>(9 -iLoc)
+        if iLoc % 8 < 4:
+            possibility &=int(~FILE_GH)
+        else:
+            possibility &=int(~FILE_AB)
+        if (possibility) & myK != 0:
+            return False
+        
+        return True
+
+    def doMove(self, move):
+        undoMove = []
+        type = move['type']
+        if type.isupper():
+            if type == 'P':
+                self.WP = self.doMoveHelperPawn(move, self.WP, undoMove)
+                self.updateHash(move, 1, undoMove)
+            elif type == 'B':
+                self.WB = self.doMoveHelper(move, self.WB, undoMove)
+                self.updateHash(move, 4, undoMove)
+            elif type == 'N':
+                self.WN = self.doMoveHelper(move, self.WN, undoMove)
+                self.updateHash(move, 2, undoMove)
+            elif type == 'R':
+                self.WR = self.doMoveHelper(move, self.WR, undoMove)
+                self.updateHash(move, 6, undoMove)
+                if self.WR & int(FILE_A) & int(RANK_1) == 0:
+                    self.castleRight = self.castleRight.replace('K','')
+                elif self.WR & int(FILE_H) & int(RANK_1) == 0:
+                    self.castleRight = self.castleRight.replace('Q','')
+            elif type == 'K':
+                self.WK = self.doMoveHelperKing(move, self.WK, undoMove)
+                self.updateHash(move, 10, undoMove)
+                undoMove.append(('castle', self.castleRight))
+                self.castleRight = self.castleRight.replace('KQ','')
+            elif type == 'Q':
+                self.WQ = self.doMoveHelper(move, self.WQ, undoMove)
+                self.updateHash(move, 8, undoMove)
+
+            if move['type'] =='P' and move.get('enPassant'):
+                destination = move['enemy']
+                self.clearDestination(True, destination, undoMove)   
+            elif not move.get('castle'):
+                destination = move['to']
+                self.clearDestination(True, destination, undoMove)   
+        else:
+            if type == 'p':
+                self.BP = self.doMoveHelperPawn(move, self.BP, undoMove)
+                self.updateHash(move, 2, undoMove)
+            elif type == 'b':
+                self.BB = self.doMoveHelper(move, self.BB, undoMove)
+                self.updateHash(move, 5, undoMove)
+            elif type == 'n':
+                self.BN = self.doMoveHelper(move, self.BN, undoMove)
+                self.updateHash(move, 3, undoMove)
+            elif type == 'r':
+                self.BR = self.doMoveHelper(move, self.BR, undoMove)
+                self.updateHash(move, 7, undoMove)
+                if self.BR & int(FILE_A) & int(RANK_8) == 0:
+                    self.castleRight = self.castleRight.replace('k','')
+                elif self.WR & int(FILE_H) & int(RANK_8) == 0:
+                    self.castleRight = self.castleRight.replace('q','')
+            elif type == 'k':
+                self.BK = self.doMoveHelperKing(move, self.BK, undoMove)
+                self.updateHash(move, 11, undoMove)
+                undoMove.append(('castle', self.castleRight))
+                self.castleRight = self.castleRight.replace('kq','')
+            elif type == 'q':
+                self.BQ = self.doMoveHelper(move, self.BQ, undoMove)
+                self.updateHash(move, 9, undoMove)
+
+            if move['type'] == 'p' and move.get('enPassant'):
+                destination = move['enemy']
+                self.clearDestination(False, destination, undoMove) 
+            elif not move.get('castle') :   
+                destination = move['to']
+                self.clearDestination(False, destination, undoMove) 
+
+
+        self.isWhiteTurn = not self.isWhiteTurn
+        undoMove.append(('enPassant', self.enPassant))
+        if move.get('double'):
+            self.enPassant = move['double']
+        else:
+            self.enPassant = '-'
+        self.MOVE_HISTORY.append(undoMove)
+        # boardString = getBoardStr(self) #might be replaced with hash function later
+        # if boardString in self.STATE_HISTORY:
+        #     self.STATE_HISTORY[boardString] += 1
+        # else:
+        #     self.STATE_HISTORY[boardString] = 1
+
+    def doMoveHelper(self, move, BOARD, undoMove:array = None):
+        if undoMove is not None:
+            undoMove.append((move['type'], BOARD))
+
+        start = move['from']
+        end = move['to']
+        BOARD &= ~(1 << start)
+        BOARD |= (1 << end)
+        return BOARD
+
+    def doMoveHelperKing(self, move, BOARD, undoMove:array = None):
+        if not move.get('castle'):
+            start = move['from']
+            end = move['to']
+            undoMove.append((move['type'], BOARD))
+            BOARD &= ~(1 << start)
+            BOARD |= (1 << end)
+        else:
+            type = move['type']
+            castle = move ['castle']
+            if type.isupper():
+                if castle == 'q':
+                    undoMove.append((type, BOARD))
+                    undoMove.append(('r', self.WR))
+                    BOARD =(BOARD >> 1)
+                    self.WR ^= 72057594037927936
+                    self.WR |=(1 << 60)
+                elif castle =='k':
+                    undoMove.append((type, BOARD))
+                    undoMove.append(('r', self.WR))
+                    BOARD =(BOARD << 1)
+                    self.WR ^= 9223372036854775808
+                    self.WR |=(1 << 60)
+
+            else:
+                if castle == 'q':
+                    undoMove.append((type, BOARD))
+                    undoMove.append(('r', self.BR))
+                    BOARD = BOARD >> 1 
+                    self.BR ^= 1
+                    self.BR |=(1 << 4)
+                elif castle == 'k':
+                    undoMove.append((type, BOARD))
+                    undoMove.append(('r', self.BR))
+                    BOARD = BOARD << 1 
+                    self.BR ^= 128
+                    self.BR |=(1 << 4)
+        return BOARD
+
+
+    def doMoveHelperPawn(self, move, BOARD, undoMove:array = None):
+        oldBoard = BOARD
+        start = move['from']
+        end = move['to']
+        if not move.get('isPromo'):
+            if (((BOARD >> start) & 1) == 1):
+                BOARD &= ~(1 << start)
+                BOARD |= (1 << end)
+                undoMove.append((move['type'], oldBoard))
+        else:
+            if (((BOARD >> start) & 1) == 1):
+                BOARD &= ~(1 << start)
+                type = move['promoType']
+                if type == 'Q':
+                    oldBoard2 = self.WQ
+                    self.WQ |= (1 << end)
+                elif type == 'R':
+                    oldBoard2 = self.WR
+                    self.WR |= (1 << end)
+                elif type == 'B':
+                    oldBoard2 = self.WB
+                    self.WB |= (1 << end)
+                elif type == 'N':
+                    oldBoard2 = self.WN
+                    self.WN |= (1 << end)
+                elif type == 'q':
+                    oldBoard2 = self.BQ
+                    self.BQ |= (1 << end)
+                elif type == 'r':
+                    oldBoard2 = self.BR
+                    self.BR |= (1 << end)
+                elif type == 'b':
+                    oldBoard2 = self.BB
+                    self.BB |= (1 << end)
+                elif type == 'n':
+                    oldBoard2 = self.BN
+                    self.BN |= (1 << end)
+
+                undoMove.extend([(move['type'], oldBoard),(type,oldBoard2)])
+
+        return BOARD
+
+    def updateHash(self, move, value, undoMove:array):
+        start = move['from']
+        end = move['to']
+        undoMove.append(('hash', self.hash))
+        self.hash ^=self.zobTable[start][value]
+        self.hash ^=self.zobTable[end][value]
+
+    def clearDestination(self, isWhite:bool, destination:int, undoMove:array):
+        if isWhite:
+            if (((self.BP >> destination) & 1) == 1):
+                undoMove.append(('p', self.BP))
+                self.BP &= ~(1 << destination)
+            elif (((self.BN >> destination) & 1) == 1):
+                undoMove.append(('n', self.BN))
+                self.BN&=~(1<<destination)
+            elif (((self.BQ >> destination) & 1) == 1):
+                undoMove.append(('q', self.BQ))
+                self.BQ&=~(1<<destination)
+            elif (((self.BB >> destination) & 1) == 1):
+                undoMove.append(('b', self.BB))
+                self.BB&=~(1<<destination)
+            elif (((self.BR >> destination) & 1) == 1):
+                undoMove.append(('r', self.BR))
+                self.BR&=~(1<<destination)
+            elif (((self.BK >> destination) & 1) == 1):
+                undoMove.append(('k', self.BK))
+                self.BK&=~(1<<destination) 
+        else:
+            if (((self.WP >> destination) & 1) == 1):
+                undoMove.append(('P', self.WP))
+                self.WP &= ~(1 << destination)
+            elif (((self.WN >> destination) & 1) == 1):
+                undoMove.append(('N', self.WN))
+                self.WN&=~(1<<destination)
+            elif (((self.WQ >> destination) & 1) == 1):
+                undoMove.append(('Q', self.WQ))
+                self.WQ&=~(1<<destination)
+            elif (((self.WB >> destination) & 1) == 1):
+                undoMove.append(('B', self.WB))
+                self.WB&=~(1<<destination)
+            elif (((self.WR >> destination) & 1) == 1):
+                undoMove.append(('R', self.WR))
+                self.WR&=~(1<<destination)
+            elif (((self.WK >> destination) & 1) == 1):
+                undoMove.append(('K', self.WK))
+                self.WK&=~(1<<destination) 
+
+    def undoLastMove(self):
+        if len(self.MOVE_HISTORY) == 0:
+            return
+        last = self.MOVE_HISTORY.pop()
+        # self.STATE_HISTORY[getBoardStr(self)]-=1 #might be replaced with hash function later
+        
+        for type, value in last:
+            if type =='P':
+                self.WP = value
+            elif type == 'B':
+                self.WB = value
+            elif type == 'N':
+                self.WN = value
+            elif type == 'R':
+                self.WR = value
+            elif type == 'Q':
+                self.WQ = value
+            elif type == 'K':
+                self.WK = value
+            elif type =='p':
+                self.BP = value
+            elif type == 'b':
+                self.BB = value
+            elif type == 'n':
+                self.BN = value
+            elif type == 'r':
+                self.BR = value
+            elif type == 'q':
+                self.BQ = value
+            elif type == 'k':
+                self.BK = value
+            elif type == 'castle':
+                self.castleRight = value
+            elif type == 'enPassant':
+                self.enPassant = value
+            elif type == 'hash':
+                self.hash = value
+        self.isWhiteTurn = not self.isWhiteTurn        
+    
+    def printBoard(self):
+        printBits(self.WP, 'White Pawns')
+        printBits(self.WN, 'White Knights')
+        printBits(self.WB, 'White Bishops')
+        printBits(self.WQ, 'White Queen')
+        printBits(self.WR, 'White Rooks')
+        printBits(self.WK, 'White King')
+        print('===========================')
+        printBits(self.BP, 'Black Pawns')
+        printBits(self.BN, 'Black Knights')
+        printBits(self.BB, 'Black Bishops')
+        printBits(self.BQ, 'Black Queen')
+        printBits(self.BR, 'Black Rooks')
+        printBits(self.BK, 'Black King')
+        
+    def evaluate(self):
+        value = 0
+        colorfactor = -1
+        if self.isWhiteTurn:
+            colorfactor = 1
+
+        pawns = 1*(countSetBits(self.WP) - countSetBits(self.BP))
+        knightsAndBishops = 3*(countSetBits(self.WN | self.WB) - countSetBits(self.BN | self.BB))
+        rooks = 5* (countSetBits(self.WR) - countSetBits(self.BR))
+        queens = 9 * (countSetBits(self.WQ) - countSetBits(self.BQ))
+        squarePieceBalance = colorfactor*(queens + rooks + knightsAndBishops + pawns)
+        
+        movesW = self.possibleMovesW()
+        movesB = self.possibleMovesB()
+        simpleMobility = colorfactor*(len(movesW) - len(movesB))
+        
+        value = squarePieceBalance + simpleMobility
+        
+        if self.isCheck(): value = -10
+        if self.isRemis(): value = -100
+        if self.isCheckMate(): value = -10000
+        if self.isKingOfTheHill(): value = 10000
+        
+        return value 
+        
+    
+# //////////////////////////////////////////////////////
+#
+#                    State checks
+#
+# //////////////////////////////////////////////////////
+
+    def isGameDone(self):
+        return self.isCheckMate() or self.isKingOfTheHill() or self.isRemis()
+        
+    def isCheck(self):
+        K = self.BK
+        if (self.isWhiteTurn):
+            K = self.WK
+        return self.unsafeFor(self.isWhiteTurn) & K > 0
+    
+    def isCheckMate(self):
+        return len(self.getMoves()) == 0 and self.isCheck()
+    
+    def isKingOfTheHill(self):
+        K = self.BK
+        if (self.isWhiteTurn):
+            K = self.WK
+        return HILLS & K > 0
+    
+    def isRemis(self):
+        return self.is3Fold() or self.is50Rule() or self.isStaleMate()
+        
+    def isStaleMate(self):
+        return len(self.getMoves()) == 0 and not self.isCheck()
+        
+    def is50Rule(self):
+        return self.halfmoveClock == 50 # or 100??
+
+    def is3Fold(self):
+        # for key in self.STATE_HISTORY:
+        #     if self.STATE_HISTORY[key] >= 3:
+        #         return True
+        return False
+
