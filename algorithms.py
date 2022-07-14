@@ -38,8 +38,8 @@ def minimax(board, depth, isMax, playerAtMoveFactor, shouldSave):
             board.undoLastMove()
         return value    
         
-def alphaBeta(board, depth, rootDepth, alpha, beta, isMax, shouldSave, stopTime):
-    global bestMoves
+def alphaBeta(board, depth, alpha, beta, isMax, shouldSave, stopTime, counter={"count":0}):
+    counter["count"] += 1
     if isTimeUp(stopTime): print("Time up!!!")
     if isMax:
         minmaxFactor = 1
@@ -59,14 +59,14 @@ def alphaBeta(board, depth, rootDepth, alpha, beta, isMax, shouldSave, stopTime)
                     score = board.ttable[hash]["score"]
                 else:
                     #UPDATE
-                    score = alphaBeta(board, depth - 1, rootDepth,value, beta, 0, 0, stopTime)
+                    score = alphaBeta(board, depth - 1,value, beta, 0, 0, stopTime, counter)
                     if isTimeUp(stopTime):
                         score = board.ttable[hash]["score"]
                     else:
                         board.ttable[hash] = { "score" : score, "depth" : depth-1, "move" : move }
             else:
                 #CREATE
-                score = alphaBeta(board, depth - 1,rootDepth, value, beta, 0, 0, stopTime) 
+                score = alphaBeta(board, depth - 1, value, beta, 0, 0, stopTime, counter) 
                 if not (isTimeUp(stopTime)):
                     board.ttable[hash] = { "score" : score, "depth" : depth-1, "move" : move }
             value = max(value, score)
@@ -87,16 +87,48 @@ def alphaBeta(board, depth, rootDepth, alpha, beta, isMax, shouldSave, stopTime)
                     score = board.ttable[hash]["score"]
                 else:
                     #UPDATE
-                    score = alphaBeta(board, depth - 1,rootDepth, alpha, value, 1, 0, stopTime)
+                    score = alphaBeta(board, depth - 1, alpha, value, 1, 0, stopTime, counter)
                     if isTimeUp(stopTime):
                         score = board.ttable[hash]["score"]
                     else:
                         board.ttable[hash] = { "score" : score, "depth" : depth-1, "move" : move }
             else:
                 #CREATE
-                score = alphaBeta(board, depth - 1, rootDepth, alpha, value, 1, 0, stopTime) 
+                score = alphaBeta(board, depth - 1, alpha, value, 1, 0, stopTime, counter) 
                 if not (isTimeUp(stopTime)):
                     board.ttable[hash] = { "score" : score, "depth" : depth-1, "move" : move }
+            value = min(value, score)
+            board.undoLastMove()
+            if value <= alpha:
+                break
+        return value
+
+def alphaBetaNoHash(board, depth, alpha, beta, isMax, shouldSave, counter={"count":0}):
+    counter["count"] += 1
+    if isMax:
+        minmaxFactor = 1
+    else:
+        minmaxFactor = -1
+    if (depth == 0) or board.isGameDone():
+        return minmaxFactor * board.evaluate() * (1.1**depth)
+    moves = board.getMoves()
+    if isMax:
+        value = alpha
+        for move in moves:
+            board.doMove(move)
+            score = alphaBetaNoHash(board, depth - 1, value, beta, 0, 0, counter) 
+            value = max(value, score)
+            board.undoLastMove()
+            if shouldSave:
+                bestMoves.append({ "move": move, "value": score })
+            if value >= beta:
+                break
+        return value
+    else:
+        value = beta
+        for move in moves:
+            board.doMove(move)
+            score = alphaBetaNoHash(board, depth - 1, alpha, value, 1, 0, counter) 
             value = min(value, score)
             board.undoLastMove()
             if value <= alpha:

@@ -16,10 +16,9 @@ def getMoves():
 
 def alphaBetaMove(depth, alpha, beta, stopTime):
     print("Executing alpha beta")
-    global bestMoves
     bestMoves.clear()
     start = time()
-    alphaBeta(current_board,depth,depth, alpha, beta, 1,1 , stopTime)
+    alphaBeta(current_board,depth, alpha, beta, 1,1 , stopTime)
     print("Depth "+str(depth) + " took " + str(time()-start) + " seconds")
     printBestMoves(bestMoves)
     bestMove = pickRandomBest(bestMoves)

@@ -42,10 +42,10 @@ HILLS = strBBtoBB("""
     00000000
 """)
 
-CASTLE_K = np.uint64(6917529027641081856)
-CASTLE_Q = np.uint64(1008806316530991104)
-CASTLE_k = np.uint64(96)
-CASTLE_q = np.uint64(14)
+CASTLE_K = int(np.uint64(6917529027641081856))
+CASTLE_Q = int(np.uint64(1008806316530991104))
+CASTLE_k = int(np.uint64(96))
+CASTLE_q = int(np.uint64(14))
 
 RankMasks8 = [np.uint64(0xFF),np.uint64(0xFF00), np.uint64(0xFF0000), np.uint64(0xFF000000), np.uint64(
     0xFF00000000), np.uint64(0xFF0000000000), np.uint64(0xFF000000000000), np.uint64(0xFF00000000000000)]
@@ -61,10 +61,6 @@ FileMasks82 = [
 DiagonalMasks8 = [np.uint64(0x1), np.uint64(0x102), np.uint64(0x10204), np.uint64(0x1020408), np.uint64(0x102040810), np.uint64(0x10204081020), np.uint64(0x1020408102040),np.uint64(0x102040810204080), np.uint64(0x204081020408000), np.uint64(0x408102040800000), np.uint64(0x810204080000000),np.uint64(0x1020408000000000), np.uint64(0x2040800000000000), np.uint64(0x4080000000000000), np.uint64(0x8000000000000000)]
 
 AntiDiagonalMasks8 = [np.uint64(0x80), np.uint64(0x8040), np.uint64(0x804020), np.uint64(0x80402010), np.uint64(0x8040201008), np.uint64(0x804020100804), np.uint64(0x80402010080402),np.uint64(0x8040201008040201), np.uint64(0x4020100804020100), np.uint64(0x2010080402010000), np.uint64(0x1008040201000000),np.uint64(0x804020100000000), np.uint64(0x402010000000000), np.uint64(0x201000000000000), np.uint64(0x100000000000000)]
-
-ZERO = np.uint64(0)
-ONE = np.uint64(1)
-TWO = np.uint64(2)
 
 square = {
     1:'a8',                 2:'b8',                  4:'c8',                  8:'d8',                  16:'e8',                  32:'f8',                  64:'g8',                  128:'h8', 

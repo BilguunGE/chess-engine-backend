@@ -5,7 +5,6 @@ import numpy as np
 from helpers import *
 from constants import *
 from copy import copy
-from algorithms import *
 
 
 class Board:
@@ -36,9 +35,9 @@ class Board:
     MOVE_HISTORY = []
     STATE_HISTORY = {} #später transpostion table?
     zobTable = [[(randint(1,2**64 - 1)) for i in range(12)]for j in range(64)]
-    zobEnPass = [np.uint64(randint(1,2**64 - 1)) for i in range(8)]
-    zobCastle = [np.uint64(randint(1,2**64 - 1)) for i in range(4)]
-    zobTurn = np.uint64(randint(1,2**64 - 1))
+    zobEnPass = [(randint(1,2**64 - 1)) for i in range(8)]
+    zobCastle = [(randint(1,2**64 - 1)) for i in range(4)]
+    zobTurn = (randint(1,2**64 - 1))
     ttable = {} 
     """
     Table entries with form:
@@ -205,10 +204,11 @@ class Board:
         #     hash ^= self.zobCastle[2]
         # if "q" in self.castleRight:
         #     hash ^= self.zobCastle[3]  
-        # if not self.isWhiteTurn:
-        #     hash ^= self.zobTurn
+        if not self.isWhiteTurn:
+            hash ^= self.zobTurn
 
         self.hash = hash
+        return hash
 
 # //////////////////////////////////////////////////////
 #
@@ -417,11 +417,11 @@ class Board:
         self.moves.append(moveN)
 
     def HAndVMoves(self, s, OCCUPIED_CUSTOM = None):
-        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else np.uint(self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK)
+        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else np.uint(self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
         return self.get_rank_moves_bb(s, OCCUPIED) | self.get_file_moves_bb(s, OCCUPIED)
     
     def DAndAntiDMoves(self, s:int, OCCUPIED_CUSTOM = None):
-        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else np.uint(self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK)
+        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else np.uint(self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
         return self.get_diag_moves_bb(s, OCCUPIED) | self.get_antidiag_moves_bb(s, OCCUPIED)
 
     def get_rank_moves_bb(self, i, occ):
@@ -846,9 +846,9 @@ class Board:
             elif type == 'R':
                 self.WR = self.doMoveHelper(move, self.WR, undoMove)
                 self.updateHash(move, 6, undoMove)
-                if self.WR & FILE_A & RANK_1 == 0:
+                if self.WR & int(FILE_A) & int(RANK_1) == 0:
                     self.castleRight = self.castleRight.replace('K','')
-                elif self.WR & FILE_H & RANK_1 == 0:
+                elif self.WR & int(FILE_H) & int(RANK_1) == 0:
                     self.castleRight = self.castleRight.replace('Q','')
             elif type == 'K':
                 self.WK = self.doMoveHelperKing(move, self.WK, undoMove)
@@ -878,9 +878,9 @@ class Board:
             elif type == 'r':
                 self.BR = self.doMoveHelper(move, self.BR, undoMove)
                 self.updateHash(move, 7, undoMove)
-                if self.BR & FILE_A & RANK_8 == 0:
+                if self.BR & int(FILE_A) & int(RANK_8) == 0:
                     self.castleRight = self.castleRight.replace('k','')
-                elif self.WR & FILE_H & RANK_8 == 0:
+                elif self.WR & int(FILE_H) & int(RANK_8) == 0:
                     self.castleRight = self.castleRight.replace('q','')
             elif type == 'k':
                 self.BK = self.doMoveHelperKing(move, self.BK, undoMove)
@@ -927,8 +927,8 @@ class Board:
             start = move['from']
             end = move['to']
             undoMove.append((move['type'], BOARD))
-            BOARD &= ~(ONE << start)
-            BOARD |= (ONE << end)
+            BOARD &= ~(1 << start)
+            BOARD |= (1 << end)
         else:
             type = move['type']
             castle = move ['castle']
@@ -936,29 +936,29 @@ class Board:
                 if castle == 'q':
                     undoMove.append((type, BOARD))
                     undoMove.append(('r', self.WR))
-                    BOARD =(BOARD >> ONE)
-                    self.WR ^=(np.uint64(72057594037927936))
-                    self.WR |=(ONE << np.uint64(60))
+                    BOARD =(BOARD >> 1)
+                    self.WR ^= 72057594037927936
+                    self.WR |=(1 << 60)
                 elif castle =='k':
                     undoMove.append((type, BOARD))
                     undoMove.append(('r', self.WR))
-                    BOARD =(BOARD << ONE)
-                    self.WR ^=(np.uint64(9223372036854775808))
-                    self.WR |=(ONE << np.uint64(60))
+                    BOARD =(BOARD << 1)
+                    self.WR ^= 9223372036854775808
+                    self.WR |=(1 << 60)
 
             else:
                 if castle == 'q':
                     undoMove.append((type, BOARD))
                     undoMove.append(('r', self.BR))
-                    BOARD = BOARD >> ONE 
-                    self.BR ^= np.uint64(1)
-                    self.BR |=(ONE << np.uint64(4))
+                    BOARD = BOARD >> 1 
+                    self.BR ^= 1
+                    self.BR |=(1 << 4)
                 elif castle == 'k':
                     undoMove.append((type, BOARD))
                     undoMove.append(('r', self.BR))
-                    BOARD = BOARD << ONE 
-                    self.BR ^= np.uint64(128)
-                    self.BR |=(ONE << np.uint64(4))
+                    BOARD = BOARD << 1 
+                    self.BR ^= 128
+                    self.BR |=(1 << 4)
         return BOARD
 
 
@@ -967,38 +967,38 @@ class Board:
         start = move['from']
         end = move['to']
         if not move.get('isPromo'):
-            if (((BOARD >> start) & ONE) == ONE):
-                BOARD &= ~(ONE << start)
-                BOARD |= (ONE << end)
+            if (((BOARD >> start) & 1) == 1):
+                BOARD &= ~(1 << start)
+                BOARD |= (1 << end)
                 undoMove.append((move['type'], oldBoard))
         else:
-            if (((BOARD >> start) & ONE) == ONE):
-                BOARD &= ~(ONE << start)
+            if (((BOARD >> start) & 1) == 1):
+                BOARD &= ~(1 << start)
                 type = move['promoType']
                 if type == 'Q':
                     oldBoard2 = self.WQ
-                    self.WQ |= (ONE << end)
+                    self.WQ |= (1 << end)
                 elif type == 'R':
                     oldBoard2 = self.WR
-                    self.WR |= (ONE << end)
+                    self.WR |= (1 << end)
                 elif type == 'B':
                     oldBoard2 = self.WB
-                    self.WB |= (ONE << end)
+                    self.WB |= (1 << end)
                 elif type == 'N':
                     oldBoard2 = self.WN
-                    self.WN |= (ONE << end)
+                    self.WN |= (1 << end)
                 elif type == 'q':
                     oldBoard2 = self.BQ
-                    self.BQ |= (ONE << end)
+                    self.BQ |= (1 << end)
                 elif type == 'r':
                     oldBoard2 = self.BR
-                    self.BR |= (ONE << end)
+                    self.BR |= (1 << end)
                 elif type == 'b':
                     oldBoard2 = self.BB
-                    self.BB |= (ONE << end)
+                    self.BB |= (1 << end)
                 elif type == 'n':
                     oldBoard2 = self.BN
-                    self.BN |= (ONE << end)
+                    self.BN |= (1 << end)
 
                 undoMove.extend([(move['type'], oldBoard),(type,oldBoard2)])
 
@@ -1011,45 +1011,45 @@ class Board:
         self.hash ^=self.zobTable[start][value]
         self.hash ^=self.zobTable[end][value]
 
-    def clearDestination(self, isWhite:bool, destination:np.uint64, undoMove:array):
+    def clearDestination(self, isWhite:bool, destination:int, undoMove:array):
         if isWhite:
-            if (((self.BP >> destination) & ONE) == ONE):
+            if (((self.BP >> destination) & 1) == 1):
                 undoMove.append(('p', self.BP))
-                self.BP &= ~(ONE << destination)
-            elif (((self.BN >> destination) & ONE) == ONE):
+                self.BP &= ~(1 << destination)
+            elif (((self.BN >> destination) & 1) == 1):
                 undoMove.append(('n', self.BN))
-                self.BN&=~(ONE<<destination)
-            elif (((self.BQ >> destination) & ONE) == ONE):
+                self.BN&=~(1<<destination)
+            elif (((self.BQ >> destination) & 1) == 1):
                 undoMove.append(('q', self.BQ))
-                self.BQ&=~(ONE<<destination)
-            elif (((self.BB >> destination) & ONE) == ONE):
+                self.BQ&=~(1<<destination)
+            elif (((self.BB >> destination) & 1) == 1):
                 undoMove.append(('b', self.BB))
-                self.BB&=~(ONE<<destination)
-            elif (((self.BR >> destination) & ONE) == ONE):
+                self.BB&=~(1<<destination)
+            elif (((self.BR >> destination) & 1) == 1):
                 undoMove.append(('r', self.BR))
-                self.BR&=~(ONE<<destination)
-            elif (((self.BK >> destination) & ONE) == ONE):
+                self.BR&=~(1<<destination)
+            elif (((self.BK >> destination) & 1) == 1):
                 undoMove.append(('k', self.BK))
-                self.BK&=~(ONE<<destination) 
+                self.BK&=~(1<<destination) 
         else:
-            if (((self.WP >> destination) & ONE) == ONE):
+            if (((self.WP >> destination) & 1) == 1):
                 undoMove.append(('P', self.WP))
-                self.WP &= ~(ONE << destination)
-            elif (((self.WN >> destination) & ONE) == ONE):
+                self.WP &= ~(1 << destination)
+            elif (((self.WN >> destination) & 1) == 1):
                 undoMove.append(('N', self.WN))
-                self.WN&=~(ONE<<destination)
-            elif (((self.WQ >> destination) & ONE) == ONE):
+                self.WN&=~(1<<destination)
+            elif (((self.WQ >> destination) & 1) == 1):
                 undoMove.append(('Q', self.WQ))
-                self.WQ&=~(ONE<<destination)
-            elif (((self.WB >> destination) & ONE) == ONE):
+                self.WQ&=~(1<<destination)
+            elif (((self.WB >> destination) & 1) == 1):
                 undoMove.append(('B', self.WB))
-                self.WB&=~(ONE<<destination)
-            elif (((self.WR >> destination) & ONE) == ONE):
+                self.WB&=~(1<<destination)
+            elif (((self.WR >> destination) & 1) == 1):
                 undoMove.append(('R', self.WR))
-                self.WR&=~(ONE<<destination)
-            elif (((self.WK >> destination) & ONE) == ONE):
+                self.WR&=~(1<<destination)
+            elif (((self.WK >> destination) & 1) == 1):
                 undoMove.append(('K', self.WK))
-                self.WK&=~(ONE<<destination) 
+                self.WK&=~(1<<destination) 
 
     def undoLastMove(self):
         if len(self.MOVE_HISTORY) == 0:
