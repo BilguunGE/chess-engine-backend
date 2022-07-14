@@ -1,4 +1,4 @@
-from Board2 import *
+from Board import *
 from helpers import *
 from algorithms import *
 
