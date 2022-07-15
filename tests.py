@@ -1,5 +1,5 @@
 from time import time
-from Board2 import *
+from Board import *
 from helpers import *
 from algorithms import *
 
@@ -83,7 +83,7 @@ def testDoUndo(board, moveAmount):
     print()
     print(after)
     print("isWhite: ", board.isWhiteTurn)
-    print("castleRight: ", board.castleRight)
+    print("castleRight: ", board.stringifyCastleRights())
     print("enPassant: ", board.enPassant)
     print("half: ", board.halfmoveClock)
     print("full: ", board.fullmoveCount)
@@ -148,5 +148,6 @@ firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 start = time()
 
 # mst3([startGame,midGame,endGame],3, 10)
+print(endGame.getMoves())
 
 print(f"\nTest took {time() - start} seconds.\n")
