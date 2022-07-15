@@ -444,11 +444,11 @@ class Board:
         self.moves.append(moveN)
 
     def HAndVMoves(self, s, OCCUPIED_CUSTOM = None):
-        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else np.uint(self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
+        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else (self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
         return self.get_rank_moves_bb(s, OCCUPIED) | self.get_file_moves_bb(s, OCCUPIED)
     
     def DAndAntiDMoves(self, s:int, OCCUPIED_CUSTOM = None):
-        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else np.uint(self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
+        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else (self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
         return self.get_diag_moves_bb(s, OCCUPIED) | self.get_antidiag_moves_bb(s, OCCUPIED)
 
     def get_rank_moves_bb(self, i, occ):
@@ -508,7 +508,7 @@ class Board:
         i = B&~(B-1)
         while(i != 0):
             iLocation = trailingZeros(i)
-            possibility = int(self.DAndAntiDMoves(iLocation) & self.NOT_MY_PIECES)
+            possibility = self.DAndAntiDMoves(iLocation) & self.NOT_MY_PIECES
             j = possibility & ~(possibility-1)
             while (j != 0):
                 move = {}
@@ -532,7 +532,7 @@ class Board:
         i = R&~(R-1)
         while(i != 0):
             iLocation = trailingZeros(i)
-            possibility = int(self.HAndVMoves(iLocation) & self.NOT_MY_PIECES)
+            possibility = self.HAndVMoves(iLocation) & self.NOT_MY_PIECES
             j = possibility & ~(possibility-1)
             while (j != 0):
                 move = {}
@@ -556,7 +556,7 @@ class Board:
         i = Q&~(Q-1)
         while(i != 0):
             iLocation = trailingZeros(i)
-            possibility = int((self.DAndAntiDMoves(iLocation) | self.HAndVMoves(iLocation) )& self.NOT_MY_PIECES)
+            possibility = (self.DAndAntiDMoves(iLocation) | self.HAndVMoves(iLocation) )& self.NOT_MY_PIECES
             j = possibility & ~(possibility-1)
             while (j != 0):
                 move = {}
@@ -582,9 +582,9 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             if iLoc >  18:
-                possibility = int(KNIGHT_SPAN) << (iLoc-18)
+                possibility = KNIGHT_SPAN << (iLoc-18)
             else:
-                possibility = int(KNIGHT_SPAN) >> (18 - iLoc)
+                possibility = KNIGHT_SPAN >> (18 - iLoc)
             if iLoc%8 < 4:
                 possibility &= int(~FILE_GH) & self.NOT_MY_PIECES
             else:
@@ -621,15 +621,15 @@ class Board:
         isWhiteKing = K & self.WK > 0 
         iLoc = trailingZeros(K)
         if iLoc >  9:
-            possibility = int(KING_SPAN) << (iLoc-9)
+            possibility = KING_SPAN << (iLoc-9)
         else:
-            possibility = int(KING_SPAN) >> (9 - iLoc)
+            possibility = KING_SPAN >> (9 - iLoc)
         if iLoc%8 < 4:
             possibility &= int(~FILE_GH) & self.NOT_MY_PIECES
         else:
             possibility &= int(~FILE_AB) & self.NOT_MY_PIECES
         j = possibility &~(possibility-1)
-        safe = int(~self.unsafeFor(isWhiteKing))
+        safe = ~self.unsafeFor(isWhiteKing)
 
         if castleRightK and castleK & safe & self.EMPTY == castleK :
             move = {}
@@ -691,9 +691,9 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             if iLoc > 18:
-                possibility = int(KNIGHT_SPAN) << (iLoc - 18)
+                possibility = KNIGHT_SPAN << (iLoc - 18)
             else:
-                possibility = int(KNIGHT_SPAN) >> (18 - iLoc)
+                possibility = KNIGHT_SPAN >> (18 - iLoc)
             if iLoc % 8 < 4:
                 possibility &= int(~FILE_GH)
             else:
@@ -707,7 +707,7 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             possibility = self.DAndAntiDMoves(iLoc)
-            unsafe |= int(possibility)
+            unsafe |= possibility
             QB&=~i
             i=QB&~(QB-1)
             
@@ -716,16 +716,16 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             possibility = self.HAndVMoves(iLoc)
-            unsafe |= int(possibility)
+            unsafe |= possibility
             QR&=~i
             i=QR&~(QR-1)
         
         #king
         iLoc = trailingZeros(K)
         if iLoc > 9:
-            possibility = int(KING_SPAN)<<(iLoc-9)
+            possibility = KING_SPAN<<(iLoc-9)
         else:
-            possibility = int(KING_SPAN)>>(9 -iLoc)
+            possibility = KING_SPAN>>(9 -iLoc)
         if iLoc % 8 < 4:
             possibility &=int(~FILE_GH)
         else:
@@ -810,9 +810,9 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             if iLoc > 18:
-                possibility = int(KNIGHT_SPAN) <<(iLoc - 18)
+                possibility = KNIGHT_SPAN <<(iLoc - 18)
             else:
-                possibility = int(KNIGHT_SPAN) >> (18 - iLoc)
+                possibility = KNIGHT_SPAN >> (18 - iLoc)
             if iLoc % 8 < 4:
                 possibility &= int(~FILE_GH)
             else:
@@ -827,7 +827,7 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             possibility = self.DAndAntiDMoves(iLoc, OCCUPIED)
-            if int(possibility) & myK !=0:
+            if possibility & myK !=0:
                 return False
             QB&=~i
             i=QB&~(QB-1)
@@ -837,7 +837,7 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             possibility = self.HAndVMoves(iLoc, OCCUPIED)
-            if int(possibility) & myK != 0:
+            if possibility & myK != 0:
                 return False
             QR&=~i
             i=QR&~(QR-1)
@@ -845,9 +845,9 @@ class Board:
         #king
         iLoc = trailingZeros(K)
         if iLoc > 9:
-            possibility = int(KING_SPAN)<<(iLoc-9)
+            possibility = KING_SPAN<<(iLoc-9)
         else:
-            possibility = int(KING_SPAN)>>(9 -iLoc)
+            possibility = KING_SPAN>>(9 -iLoc)
         if iLoc % 8 < 4:
             possibility &=int(~FILE_GH)
         else:
