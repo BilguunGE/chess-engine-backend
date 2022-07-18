@@ -231,8 +231,8 @@ class Board:
         #     hash ^= self.zobCastle[2]
         # if "q" in self.castleRight:
         #     hash ^= self.zobCastle[3]  
-        if not self.isWhiteTurn:
-            hash ^= self.zobTurn
+        # if not self.isWhiteTurn:
+        #     hash ^= self.zobTurn
 
         self.hash = hash
         return hash
@@ -980,7 +980,7 @@ class Board:
                     self.WR ^= 72057594037927936
                     self.WR |=(1 << 59)
                     self.hash ^= self.zobTable[56][6]
-                    self.hash ^= self.zobTable[60][6]
+                    self.hash ^= self.zobTable[59][6]
                 elif castle =='k':
                     undoMove.append((type, self.WK))
                     self.WK <<= 2
@@ -989,28 +989,28 @@ class Board:
                     self.WR ^= 9223372036854775808
                     self.WR |=(1 << 61)
                     self.hash ^= self.zobTable[63][6]
-                    self.hash ^= self.zobTable[60][6]
+                    self.hash ^= self.zobTable[61][6]
                 if self.castleRight & K_Flag: self.castleRight ^= K_Flag
                 if self.castleRight & Q_Flag: self.castleRight ^= Q_Flag
             else:
                 if castle == 'q':
                     undoMove.append((type, self.BK))
                     self.BK >>= 2
-                    self.updateHash({'from':4, 'to':3}, 11, undoMove)
+                    self.updateHash({'from':4, 'to':2}, 11, undoMove)
                     undoMove.append(('r', self.BR))
                     self.BR ^= 1
                     self.BR |=(1 << 3)
                     self.hash ^= self.zobTable[0][7]
-                    self.hash ^= self.zobTable[4][7]
+                    self.hash ^= self.zobTable[3][7]
                 elif castle == 'k':
                     undoMove.append((type, self.BK))
                     self.BK <<= 2
-                    self.updateHash({'from':4, 'to':5}, 11, undoMove)
+                    self.updateHash({'from':4, 'to':6}, 11, undoMove)
                     undoMove.append(('r', self.BR))
                     self.BR ^= 128
                     self.BR |=(1 << 5)
                     self.hash ^= self.zobTable[7][7]
-                    self.hash ^= self.zobTable[4][7]
+                    self.hash ^= self.zobTable[5][7]
                 if self.castleRight & k_Flag: self.castleRight ^= k_Flag
                 if self.castleRight & q_Flag: self.castleRight ^= q_Flag
             undoMove.append(('halfmove', self.halfmoveClock))
