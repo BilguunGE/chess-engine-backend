@@ -2,6 +2,7 @@ from time import time
 from Board import *
 from helpers import *
 from algorithms import *
+import json
 
 # //////////////////////////////////////////////////////
 #
@@ -87,6 +88,35 @@ def testDoUndo(board, moveAmount):
     print("enPassant: ", board.enPassant)
     print("half: ", board.halfmoveClock)
     print("full: ", board.fullmoveCount)
+
+def simpleTest():
+    with open('test.json') as testFile:
+        tests = json.load(testFile)
+        result = []
+        for fen in tests:
+            movesLen = len(Board(fen).getMoves())
+            result.append((fen, movesLen == tests[fen].get("n_legal_moves")))
+        filteredResult =  list(filter(lambda x: not x[1], result))
+        if filteredResult:
+            print(filteredResult)
+        else:
+            print('All right')
+
+def moveTest():
+    with open('test.json') as testFile:
+        tests = json.load(testFile)
+        for fen in tests:
+            subsequent_boards = tests[fen]['subsequent_boards']
+            board = Board(fen)
+            moves = board.getMoves()
+            for move in moves:
+                board.doMove(move)
+                newFEN = board.getFEN()
+                board.undoLastMove()
+                if not newFEN in subsequent_boards:
+                    print(fen, move, newFEN)
+                    return (newFEN, move)
+    print('All right')
     
 # //////////////////////////////////////////////////////
 #
@@ -148,6 +178,6 @@ firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 start = time()
 
 # mst3([startGame,midGame,endGame],3, 10)
-print(endGame.getMoves())
-
+simpleTest()
+moveTest()
 print(f"\nTest took {time() - start} seconds.\n")
