@@ -755,32 +755,45 @@ class Board:
         for move in moves:
             type = move['type']
             if type == 'K' or type == 'k':
+                move['score'] = self.evaluateMove(self.isWhiteTurn, 9, move['to'])
                 newMoves.append(move)
             else:
+                ownValue = 0
                 if type == 'P':
+                    ownValue = 1
                     newBoard = self.WB | self.WK | self.WN | self.WQ | self.WR | self.doMoveHelper(move, self.WP)
                 elif type == 'N':
+                    ownValue = 3
                     newBoard = self.WP | self.WB | self.WQ | self.WK | self.WR | self.doMoveHelper(move, self.WN)
                 elif type == 'B':
+                    ownValue = 3
                     newBoard = self.WP | self.WK | self.WN | self.WQ | self.WR | self.doMoveHelper(move, self.WB)
                 elif type == 'R':
+                    ownValue = 5
                     newBoard = self.WP | self.WB | self.WQ | self.WK | self.WN | self.doMoveHelper(move, self.WR)
                 elif type == 'Q':
+                    ownValue = 9
                     newBoard = self.WP | self.WB | self.WR | self.WK | self.WN | self.doMoveHelper(move, self.WQ)
                 elif type == 'p':
+                    ownValue = 1
                     newBoard = self.BB | self.BK | self.BN | self.BQ | self.BR | self.doMoveHelper(move, self.BP)
                 elif type == 'n':
+                    ownValue = 3
                     newBoard = self.BP | self.BB | self.BQ | self.BK | self.BR | self.doMoveHelper(move, self.BN)
                 elif type == 'b':
+                    ownValue = 3
                     newBoard = self.BP | self.BK | self.BN | self.BQ | self.BR | self.doMoveHelper(move, self.BB)
                 elif type == 'r':
+                    ownValue = 5
                     newBoard = self.BP | self.BB | self.BQ | self.BK | self.BN | self.doMoveHelper(move, self.BR)
                 elif type == 'q':
+                    ownValue = 9
                     newBoard = self.BP | self.BB | self.BR | self.BK | self.BN | self.doMoveHelper(move, self.BQ)
                 safe = self.leavesNotInCheck(self.isWhiteTurn, newBoard, move['to'])
                 if safe:
+                    move['score'] = self.evaluateMove(self.isWhiteTurn, ownValue, move['to'])
                     newMoves.append(move)
-        return newMoves
+        return sorted(newMoves, key=lambda x: x.get('score', 0), reverse=True)
 
     def leavesNotInCheck(self, isForWhite: bool, board = None, destination = None):
         if isForWhite:
@@ -1271,6 +1284,61 @@ class Board:
         
         return value 
         
+    def evaluateMove(self, isWhite, ownValue, destination):
+        if isWhite:
+            if (((self.BP >> destination) & 1) == 1):
+                return 1  
+            elif (((self.BN >> destination) & 1) == 1):
+                if ownValue < 3:
+                    return 3
+                else:
+                    return 1 
+            elif (((self.BQ >> destination) & 1) == 1):
+                if ownValue < 9:
+                    return 9
+                else:
+                    return 1             
+            elif (((self.BB >> destination) & 1) == 1):
+                if ownValue < 3:
+                    return 3
+                else:
+                    return 1            
+            elif (((self.BR >> destination) & 1) == 1):
+                if ownValue < 5:
+                    return 5
+                else:
+                    return 1 
+            elif (((self.BK >> destination) & 1) == 1):
+                    return 9           
+            else:
+                return 0
+        else:
+            if (((self.WP >> destination) & 1) == 1):
+                return 1 
+            elif (((self.WN >> destination) & 1) == 1):
+                if ownValue < 3:
+                    return 3
+                else:
+                    return 1 
+            elif (((self.WQ >> destination) & 1) == 1):
+                if ownValue < 9:
+                    return 9
+                else:
+                    return 1  
+            elif (((self.WB >> destination) & 1) == 1):
+                if ownValue < 3:
+                    return 3
+                else:
+                    return 1  
+            elif (((self.WR >> destination) & 1) == 1):
+                if ownValue < 5:
+                    return 5
+                else:
+                    return 1 
+            elif (((self.WK >> destination) & 1) == 1):
+              return 9
+            else:
+                return 0    
     
 # //////////////////////////////////////////////////////
 #
