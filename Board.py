@@ -755,7 +755,10 @@ class Board:
         for move in moves:
             type = move['type']
             if type == 'K' or type == 'k':
-                move['score'] = self.evaluateMove(self.isWhiteTurn, 9, move['to'])
+                if not move.get('castle'):
+                    move['score'] = self.evaluateMove(self.isWhiteTurn, 9, move['to'])
+                else:
+                    move['score'] = 1
                 newMoves.append(move)
             else:
                 ownValue = 0
