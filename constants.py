@@ -42,10 +42,11 @@ HILLS = strBBtoBB("""
     00000000
 """)
 
-CASTLE_K = int(np.uint64(6917529027641081856))
-CASTLE_Q = int(np.uint64(1008806316530991104))
-CASTLE_k = int(np.uint64(96))
-CASTLE_q = int(np.uint64(14))
+CASTLE_MASKS = {'K':6917529027641081856,'Q':1008806316530991104,'k':96, 'q':14}
+K_Flag = 1
+Q_Flag = 2
+k_Flag = 4
+q_Flag = 8
 
 RankMasks8 = [np.uint64(0xFF),np.uint64(0xFF00), np.uint64(0xFF0000), np.uint64(0xFF000000), np.uint64(
     0xFF00000000), np.uint64(0xFF0000000000), np.uint64(0xFF000000000000), np.uint64(0xFF00000000000000)]

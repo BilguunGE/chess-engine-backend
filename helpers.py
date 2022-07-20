@@ -5,7 +5,6 @@ import numpy as np
 
 # TODO Move away from string op
 def trailingZeros(v):
-     v = int(v)
      return (v & -v).bit_length() - 1
 
 # TODO buggy!
