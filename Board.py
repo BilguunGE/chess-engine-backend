@@ -1124,7 +1124,6 @@ class Board:
         if not self.isWhiteTurn:
             undoMove.append(('fullmove', self.fullmoveCount))
             self.fullmoveCount+=1
-        undoMove.append(('enPassant', self.enPassant))
         self.halfmoveClock = 0
         self.isWhiteTurn = not self.isWhiteTurn
         self.MOVE_HISTORY.append(undoMove)
@@ -1246,6 +1245,10 @@ class Board:
             elif type == 'halfmove':
                 self.halfmoveClock = value
         self.isWhiteTurn = not self.isWhiteTurn        
+    
+    def undoAllMoves(self):
+        while len(self.MOVE_HISTORY) > 0:
+            self.undoLastMove()
     
     def printBoard(self):
         printBits(self.WP, 'White Pawns')
@@ -1381,3 +1384,6 @@ class Board:
         #     if self.STATE_HISTORY[key] >= 3:
         #         return True
         return False
+
+    def didOpponentWin(self, opponentIsWhite):
+        return self.isGameDone() and not self.isWhiteTurn == opponentIsWhite
