@@ -5,6 +5,9 @@ import numpy as np
 from helpers import *
 from constants import *
 from copy import copy
+from model import EvaluationModel
+import torch
+import bitarray
 
 
 class Board:
@@ -66,11 +69,14 @@ class Board:
         ["R", "N", "B", "Q", "K", "B", "N", "R"],
     ]
 
+    model = EvaluationModel(layer_count=4,batch_size=1024,learning_rate=1e-3)
+
     def __init__(self, fenString=None):
         self.fenString = fenString
         self.initBoard()
         self.convertArraysToBitboards()
         self.genZobHash()
+        self.model.load_state_dict(torch.load('models/model_2-3.pt'))
 
     def initBoard(self):
         if not self.fenString is None:
@@ -1130,6 +1136,42 @@ class Board:
         
         return value 
         
+    def evaluateNN(self):
+        #layer = 4 - model_2-3 layer = 6 - model_2-22
+        model = EvaluationModel(layer_count=6,batch_size=1024,learning_rate=1e-3)
+        model.load_state_dict(torch.load('models/model_2-22.pt'))
+        model.eval()
+        binary = bitarray.bitarray()
+        binary.extend(bin(self.WP)[2:][::-1].zfill(64))
+        binary.extend(bin(self.BP)[2:][::-1].zfill(64))
+        binary.extend(bin(self.WK)[2:][::-1].zfill(64))
+        binary.extend(bin(self.BK)[2:][::-1].zfill(64))
+        binary.extend(bin(self.WB)[2:][::-1].zfill(64))
+        binary.extend(bin(self.BB)[2:][::-1].zfill(64))
+        binary.extend(bin(self.WR)[2:][::-1].zfill(64))
+        binary.extend(bin(self.BR)[2:][::-1].zfill(64))
+        binary.extend(bin(self.WQ)[2:][::-1].zfill(64))
+        binary.extend(bin(self.BQ)[2:][::-1].zfill(64))
+        binary.extend(bin(self.WK)[2:][::-1].zfill(64))
+        binary.extend(bin(self.BK)[2:][::-1].zfill(64))
+        binary.extend([int(self.isWhiteTurn)])
+        binary.extend(['K' in self.castleRight, 'Q' in self.castleRight, 'k' in self.castleRight,'q' in self.castleRight])
+        en_passant = [0]*64
+        if self.enPassant != '-':
+            file = 8 - int(self.enPassant[1])
+            rank = ord(self.enPassant[0]) - ord('a')
+            en_passant[file + rank*8] = 1
+        binary.extend(en_passant[16:23])
+        binary.extend(en_passant[40:47])
+        binary.extend(bin(self.halfmoveClock)[2:].zfill(8))
+        binary.extend(bin(self.fullmoveCount)[2:].zfill(8))
+        last = binary[-3:]
+        binary = binary[:-3]
+        binary.extend('00000')
+        binary.extend(last)
+        binary = np.asarray(binary.tolist()).astype(np.single)
+        x = torch.from_numpy(binary)
+        return model(x)
     
 # //////////////////////////////////////////////////////
 #
