@@ -1138,9 +1138,7 @@ class Board:
         
     def evaluateNN(self):
         #layer = 4 - model_2-3 layer = 6 - model_2-22
-        model = EvaluationModel(layer_count=4,batch_size=1024,learning_rate=1e-3)
-        model.load_state_dict(torch.load('models/model_2-3.pt'))
-        model.eval()
+        self.model.eval()
         binary = bitarray.bitarray()
         binary.extend(bin(self.WP)[2:].zfill(64))
         binary.extend(bin(self.BP)[2:].zfill(64))
@@ -1171,7 +1169,7 @@ class Board:
         binary.extend(last)
         binary = np.asarray(binary.tolist()).astype(np.single)
         x = torch.from_numpy(binary)
-        return model(x)
+        return self.model(x)
     
 # //////////////////////////////////////////////////////
 #
