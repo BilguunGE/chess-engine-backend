@@ -14,11 +14,11 @@ def initBoard(fenString):
 def getMoves():
     return {"moves" : list(map(getMoveToString, current_board.getMoves()))}
 
-def alphaBetaMove(depth, alpha, beta, stopTime):
+def alphaBetaMove(depth, alpha, beta, stopTime, useNN):
     print("Executing alpha beta")
     bestMoves.clear()
     start = time()
-    alphaBeta(current_board,depth, alpha, beta, 1,1 , stopTime)
+    alphaBeta(current_board,depth, alpha, beta, 1, 1, stopTime, useNN)
     print("Depth "+str(depth) + " took " + str(time()-start) + " seconds")
     printBestMoves(bestMoves)
     bestMove = pickRandomBest(bestMoves)
