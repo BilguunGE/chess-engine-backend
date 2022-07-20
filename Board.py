@@ -51,7 +51,7 @@ class Board:
     """
 
     isWhiteTurn = True
-    castleRight = "KQkq"
+    castleRight = 15 #1111 default
     enPassant = "-"
     halfmoveClock = 0
     fullmoveCount = 1
@@ -77,7 +77,7 @@ class Board:
             splittedFEN = self.fenString.split(' ')
             self.chessBoard = self.parseFEN(splittedFEN[0])
             self.isWhiteTurn = splittedFEN[1] == "w"
-            self.castleRight = splittedFEN[2]
+            self.convertCastleRightsToBitboard(splittedFEN[2])
             self.enPassant = splittedFEN[3]
             self.halfmoveClock = int(splittedFEN[4])
             self.fullmoveCount = int(splittedFEN[5])
@@ -96,6 +96,33 @@ class Board:
             board.append(rowContent)
         return board
         
+    def convertCastleRightsToBitboard(self, castleRight:str):
+        self.castleRight = 0
+        if castleRight == '-':
+            return
+        for cR in castleRight:
+            if cR == 'K':
+                self.castleRight |= K_Flag
+            elif cR == 'Q':
+                self.castleRight |= Q_Flag
+            elif cR == 'k':
+                self.castleRight |= k_Flag
+            elif cR == 'q':
+                self.castleRight |= q_Flag
+
+    def stringifyCastleRights(self):
+        if self.castleRight == 0:
+            return '-'
+        result = ""
+        if self.castleRight & K_Flag:
+            result+="K"
+        if self.castleRight & Q_Flag:
+            result+="Q"
+        if self.castleRight & k_Flag:
+            result+="k"
+        if self.castleRight & q_Flag:
+            result+="q"
+        return result
 
     def convertArraysToBitboards(self):
         for i in range(64):
@@ -204,11 +231,27 @@ class Board:
         #     hash ^= self.zobCastle[2]
         # if "q" in self.castleRight:
         #     hash ^= self.zobCastle[3]  
-        if not self.isWhiteTurn:
-            hash ^= self.zobTurn
+        # if not self.isWhiteTurn:
+        #     hash ^= self.zobTurn
 
         self.hash = hash
         return hash
+    
+    def getFEN(self):
+        rows = []
+        chessArray = self.convertBitboardsToArray()
+        for row in chessArray:
+            newRow = ''
+            for field in row:
+                if field =='':
+                    newRow+='1'
+                else:
+                    newRow+=field
+            newRow = re.sub('11+', lambda m: str(len(m.group())), newRow)
+            rows.append(newRow)
+        board = '/'.join(rows)
+        player = 'w' if self.isWhiteTurn else 'b'
+        return f'{board} {player} {self.stringifyCastleRights()} {self.enPassant} {self.halfmoveClock} {self.fullmoveCount}'
 
 # //////////////////////////////////////////////////////
 #
@@ -308,7 +351,7 @@ class Board:
                 isPromo = True
             if (PAWN_MOVES >> i) & 1 == 1:
                 move['toString'] = makeField((i//8)+(color*1), (i % 8)+(color*1)) + "x"+makeField((i//8), i % 8)
-                move['from'] = (((i//8)+(color*1))*8+((i % 8)-(color*1))) 
+                move['from'] = (((i//8)+(color*1))*8+((i % 8)+(color*1))) 
                 move['to'] = ((i//8)*8+(i % 8))
                 move['type'] = type
                 if isPromo:
@@ -417,11 +460,11 @@ class Board:
         self.moves.append(moveN)
 
     def HAndVMoves(self, s, OCCUPIED_CUSTOM = None):
-        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else np.uint(self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
+        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else (self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK)
         return self.get_rank_moves_bb(s, OCCUPIED) | self.get_file_moves_bb(s, OCCUPIED)
     
     def DAndAntiDMoves(self, s:int, OCCUPIED_CUSTOM = None):
-        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else np.uint(self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
+        OCCUPIED = OCCUPIED_CUSTOM if OCCUPIED_CUSTOM else (self.WP|self.WN|self.WB|self.WR|self.WQ|self.WK|self.BP|self.BN|self.BB|self.BR|self.BQ|self.BK)
         return self.get_diag_moves_bb(s, OCCUPIED) | self.get_antidiag_moves_bb(s, OCCUPIED)
 
     def get_rank_moves_bb(self, i, occ):
@@ -430,7 +473,7 @@ class Board:
         occ is the combined occupancy of the board
         """
         f = i & 7
-        occ = RankMasks8[i//8] & occ # isolate rank occupancy
+        occ = RankMasks8[i//8] & np.uint64(occ) # isolate rank occupancy
         occ = np.multiply(FILE_A, occ) >> np.uint8(56) # map to first rank
         occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to rank
         return int(RankMasks8[i//8] & occ)
@@ -442,7 +485,7 @@ class Board:
         """
         f = i & 7
         # Shift to A file
-        occ = FILE_A & occ >> np.uint8(f)
+        occ = FILE_A & np.uint64(occ) >> np.uint8(f)
         # Map occupancy and index to first rank
         occ = np.multiply(A1H8_DIAG, occ) >> np.uint8(56)
         first_rank_index = (i ^ 56) >> 3
@@ -457,7 +500,7 @@ class Board:
         occ is the combined occupancy of the board
         """
         f = i & 7
-        occ = DiagonalMasks8[(i // 8) + (i % 8)] & occ # isolate diagonal occupancy
+        occ = DiagonalMasks8[(i // 8) + (i % 8)] & np.uint64(occ) # isolate diagonal occupancy
         occ = np.multiply(FILE_A , occ) >> np.uint8(56) # map to first rank
         occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to diagonal
         return int(DiagonalMasks8[(i // 8) + (i % 8)] & occ)
@@ -468,7 +511,7 @@ class Board:
         occ is the combined occupancy of the board
         """
         f = i & 7
-        occ = AntiDiagonalMasks8[(i // 8) + 7 - (i % 8)] & occ # isolate antidiagonal occupancy
+        occ = AntiDiagonalMasks8[(i // 8) + 7 - (i % 8)] & np.uint64(occ) # isolate antidiagonal occupancy
         occ = np.multiply(FILE_A, occ) >> np.uint8(56) # map to first rank
         occ = FILE_A * FIRST_RANK_MOVES[f][occ] # lookup and map back to antidiagonal
         return int(AntiDiagonalMasks8[(i // 8) + 7 - (i % 8)] & occ)
@@ -481,7 +524,7 @@ class Board:
         i = B&~(B-1)
         while(i != 0):
             iLocation = trailingZeros(i)
-            possibility = int(self.DAndAntiDMoves(iLocation) & self.NOT_MY_PIECES)
+            possibility = self.DAndAntiDMoves(iLocation) & self.NOT_MY_PIECES
             j = possibility & ~(possibility-1)
             while (j != 0):
                 move = {}
@@ -505,7 +548,7 @@ class Board:
         i = R&~(R-1)
         while(i != 0):
             iLocation = trailingZeros(i)
-            possibility = int(self.HAndVMoves(iLocation) & self.NOT_MY_PIECES)
+            possibility = self.HAndVMoves(iLocation) & self.NOT_MY_PIECES
             j = possibility & ~(possibility-1)
             while (j != 0):
                 move = {}
@@ -529,7 +572,7 @@ class Board:
         i = Q&~(Q-1)
         while(i != 0):
             iLocation = trailingZeros(i)
-            possibility = int((self.DAndAntiDMoves(iLocation) | self.HAndVMoves(iLocation) )& self.NOT_MY_PIECES)
+            possibility = (self.DAndAntiDMoves(iLocation) | self.HAndVMoves(iLocation) )& self.NOT_MY_PIECES
             j = possibility & ~(possibility-1)
             while (j != 0):
                 move = {}
@@ -555,9 +598,9 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             if iLoc >  18:
-                possibility = int(KNIGHT_SPAN) << (iLoc-18)
+                possibility = KNIGHT_SPAN << (iLoc-18)
             else:
-                possibility = int(KNIGHT_SPAN) >> (18 - iLoc)
+                possibility = KNIGHT_SPAN >> (18 - iLoc)
             if iLoc%8 < 4:
                 possibility &= int(~FILE_GH) & self.NOT_MY_PIECES
             else:
@@ -580,37 +623,37 @@ class Board:
     def getMovesK(self, K):
         if self.isWhiteTurn:
             type = 'K'
-            castleRightK = 'K' in self.castleRight
-            castleRightQ = 'Q' in self.castleRight
-            castleK = CASTLE_K
-            castleQ = CASTLE_Q
+            castleRightK = self.castleRight & K_Flag
+            castleRightQ = self.castleRight & Q_Flag
+            castleK = CASTLE_MASKS['K']
+            castleQ = CASTLE_MASKS['Q']
         else:
             type = 'k'
-            castleRightK = 'k' in self.castleRight
-            castleRightQ = 'q' in self.castleRight
-            castleK = CASTLE_k
-            castleQ = CASTLE_q
+            castleRightK = self.castleRight & k_Flag
+            castleRightQ = self.castleRight & q_Flag
+            castleK = CASTLE_MASKS['k']
+            castleQ = CASTLE_MASKS['q']
 
         isWhiteKing = K & self.WK > 0 
         iLoc = trailingZeros(K)
         if iLoc >  9:
-            possibility = int(KING_SPAN) << (iLoc-9)
+            possibility = KING_SPAN << (iLoc-9)
         else:
-            possibility = int(KING_SPAN) >> (9 - iLoc)
+            possibility = KING_SPAN >> (9 - iLoc)
         if iLoc%8 < 4:
             possibility &= int(~FILE_GH) & self.NOT_MY_PIECES
         else:
             possibility &= int(~FILE_AB) & self.NOT_MY_PIECES
         j = possibility &~(possibility-1)
-        safe = int(~self.unsafeFor(isWhiteKing))
+        safe = ~self.unsafeFor(isWhiteKing)
 
-        if castleRightK and int(castleK) & safe & self.EMPTY == int(castleK) :
+        if castleRightK and castleK & safe & self.EMPTY == castleK :
             move = {}
             move['toString'] = "0-0"
             move['type'] = type
             move['castle'] = "k"
             self.moves.append(move)
-        if castleRightQ and int(castleQ) & safe & self.EMPTY == int(castleQ) :
+        if castleRightQ and castleQ & safe & self.EMPTY == castleQ :
             move = {}
             move['toString'] = "0-0-0"
             move['type'] = type
@@ -664,9 +707,9 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             if iLoc > 18:
-                possibility = int(KNIGHT_SPAN) << (iLoc - 18)
+                possibility = KNIGHT_SPAN << (iLoc - 18)
             else:
-                possibility = int(KNIGHT_SPAN) >> (18 - iLoc)
+                possibility = KNIGHT_SPAN >> (18 - iLoc)
             if iLoc % 8 < 4:
                 possibility &= int(~FILE_GH)
             else:
@@ -679,8 +722,8 @@ class Board:
         i = QB &~(QB-1)
         while i != 0:
             iLoc = trailingZeros(i)
-            possibility = self.DAndAntiDMoves(iLoc)
-            unsafe |= int(possibility)
+            possibility = self.DAndAntiDMoves(iLoc, self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
+            unsafe |= possibility
             QB&=~i
             i=QB&~(QB-1)
             
@@ -688,17 +731,17 @@ class Board:
         i = QR &~(QR-1)
         while i != 0:
             iLoc = trailingZeros(i)
-            possibility = self.HAndVMoves(iLoc)
-            unsafe |= int(possibility)
+            possibility = self.HAndVMoves(iLoc, self.WP|self.WN|self.WB|self.WR|self.WQ|self.BP|self.BN|self.BB|self.BR|self.BQ)
+            unsafe |= possibility
             QR&=~i
             i=QR&~(QR-1)
         
         #king
         iLoc = trailingZeros(K)
         if iLoc > 9:
-            possibility = int(KING_SPAN)<<(iLoc-9)
+            possibility = KING_SPAN<<(iLoc-9)
         else:
-            possibility = int(KING_SPAN)>>(9 -iLoc)
+            possibility = KING_SPAN>>(9 -iLoc)
         if iLoc % 8 < 4:
             possibility &=int(~FILE_GH)
         else:
@@ -712,34 +755,50 @@ class Board:
         for move in moves:
             type = move['type']
             if type == 'K' or type == 'k':
+                if not move.get('castle'):
+                    move['score'] = self.evaluateMove(self.isWhiteTurn, 9, move['to'])
+                else:
+                    move['score'] = 1
                 newMoves.append(move)
             else:
+                ownValue = 0
                 if type == 'P':
+                    ownValue = 1
                     newBoard = self.WB | self.WK | self.WN | self.WQ | self.WR | self.doMoveHelper(move, self.WP)
                 elif type == 'N':
+                    ownValue = 3
                     newBoard = self.WP | self.WB | self.WQ | self.WK | self.WR | self.doMoveHelper(move, self.WN)
                 elif type == 'B':
+                    ownValue = 3
                     newBoard = self.WP | self.WK | self.WN | self.WQ | self.WR | self.doMoveHelper(move, self.WB)
                 elif type == 'R':
+                    ownValue = 5
                     newBoard = self.WP | self.WB | self.WQ | self.WK | self.WN | self.doMoveHelper(move, self.WR)
                 elif type == 'Q':
+                    ownValue = 9
                     newBoard = self.WP | self.WB | self.WR | self.WK | self.WN | self.doMoveHelper(move, self.WQ)
                 elif type == 'p':
+                    ownValue = 1
                     newBoard = self.BB | self.BK | self.BN | self.BQ | self.BR | self.doMoveHelper(move, self.BP)
                 elif type == 'n':
+                    ownValue = 3
                     newBoard = self.BP | self.BB | self.BQ | self.BK | self.BR | self.doMoveHelper(move, self.BN)
                 elif type == 'b':
+                    ownValue = 3
                     newBoard = self.BP | self.BK | self.BN | self.BQ | self.BR | self.doMoveHelper(move, self.BB)
                 elif type == 'r':
+                    ownValue = 5
                     newBoard = self.BP | self.BB | self.BQ | self.BK | self.BN | self.doMoveHelper(move, self.BR)
                 elif type == 'q':
+                    ownValue = 9
                     newBoard = self.BP | self.BB | self.BR | self.BK | self.BN | self.doMoveHelper(move, self.BQ)
-                safe = self.unsafeFor2(self.isWhiteTurn, newBoard, move['to'])
+                safe = self.leavesNotInCheck(self.isWhiteTurn, newBoard, move['to'])
                 if safe:
+                    move['score'] = self.evaluateMove(self.isWhiteTurn, ownValue, move['to'])
                     newMoves.append(move)
-        return newMoves
+        return sorted(newMoves, key=lambda x: x.get('score', 0), reverse=True)
 
-    def unsafeFor2(self, isForWhite: bool, board = None, destination = None):
+    def leavesNotInCheck(self, isForWhite: bool, board = None, destination = None):
         if isForWhite:
             P = (self.BP)
             N = (self.BN)
@@ -783,9 +842,9 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             if iLoc > 18:
-                possibility = int(KNIGHT_SPAN) <<(iLoc - 18)
+                possibility = KNIGHT_SPAN <<(iLoc - 18)
             else:
-                possibility = int(KNIGHT_SPAN) >> (18 - iLoc)
+                possibility = KNIGHT_SPAN >> (18 - iLoc)
             if iLoc % 8 < 4:
                 possibility &= int(~FILE_GH)
             else:
@@ -800,7 +859,7 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             possibility = self.DAndAntiDMoves(iLoc, OCCUPIED)
-            if int(possibility) & myK !=0:
+            if possibility & myK !=0:
                 return False
             QB&=~i
             i=QB&~(QB-1)
@@ -810,7 +869,7 @@ class Board:
         while i != 0:
             iLoc = trailingZeros(i)
             possibility = self.HAndVMoves(iLoc, OCCUPIED)
-            if int(possibility) & myK != 0:
+            if possibility & myK != 0:
                 return False
             QR&=~i
             i=QR&~(QR-1)
@@ -818,9 +877,9 @@ class Board:
         #king
         iLoc = trailingZeros(K)
         if iLoc > 9:
-            possibility = int(KING_SPAN)<<(iLoc-9)
+            possibility = KING_SPAN<<(iLoc-9)
         else:
-            possibility = int(KING_SPAN)>>(9 -iLoc)
+            possibility = KING_SPAN>>(9 -iLoc)
         if iLoc % 8 < 4:
             possibility &=int(~FILE_GH)
         else:
@@ -833,11 +892,13 @@ class Board:
     def doMove(self, move):
         undoMove = []
         type = move['type']
+        if type == 'P' or type =='p':
+            return self.doMovePawn(move)
+        if type == 'K' or type =='k':
+            return self.doMoveKing(move)
+
         if type.isupper():
-            if type == 'P':
-                self.WP = self.doMoveHelperPawn(move, self.WP, undoMove)
-                self.updateHash(move, 1, undoMove)
-            elif type == 'B':
+            if type == 'B':
                 self.WB = self.doMoveHelper(move, self.WB, undoMove)
                 self.updateHash(move, 4, undoMove)
             elif type == 'N':
@@ -846,30 +907,17 @@ class Board:
             elif type == 'R':
                 self.WR = self.doMoveHelper(move, self.WR, undoMove)
                 self.updateHash(move, 6, undoMove)
-                if self.WR & int(FILE_A) & int(RANK_1) == 0:
-                    self.castleRight = self.castleRight.replace('K','')
-                elif self.WR & int(FILE_H) & int(RANK_1) == 0:
-                    self.castleRight = self.castleRight.replace('Q','')
-            elif type == 'K':
-                self.WK = self.doMoveHelperKing(move, self.WK, undoMove)
-                self.updateHash(move, 10, undoMove)
-                undoMove.append(('castle', self.castleRight))
-                self.castleRight = self.castleRight.replace('KQ','')
+                if self.WR & int(FILE_A) & int(RANK_1) == 0 and self.castleRight & Q_Flag:
+                    undoMove.append(('castle', self.castleRight))
+                    self.castleRight ^= Q_Flag
+                if self.WR & int(FILE_H) & int(RANK_1) == 0 and self.castleRight & K_Flag:
+                    undoMove.append(('castle', self.castleRight))
+                    self.castleRight ^= K_Flag
             elif type == 'Q':
                 self.WQ = self.doMoveHelper(move, self.WQ, undoMove)
                 self.updateHash(move, 8, undoMove)
-
-            if move['type'] =='P' and move.get('enPassant'):
-                destination = move['enemy']
-                self.clearDestination(True, destination, undoMove)   
-            elif not move.get('castle'):
-                destination = move['to']
-                self.clearDestination(True, destination, undoMove)   
         else:
-            if type == 'p':
-                self.BP = self.doMoveHelperPawn(move, self.BP, undoMove)
-                self.updateHash(move, 2, undoMove)
-            elif type == 'b':
+            if type == 'b':
                 self.BB = self.doMoveHelper(move, self.BB, undoMove)
                 self.updateHash(move, 5, undoMove)
             elif type == 'n':
@@ -878,33 +926,23 @@ class Board:
             elif type == 'r':
                 self.BR = self.doMoveHelper(move, self.BR, undoMove)
                 self.updateHash(move, 7, undoMove)
-                if self.BR & int(FILE_A) & int(RANK_8) == 0:
-                    self.castleRight = self.castleRight.replace('k','')
-                elif self.WR & int(FILE_H) & int(RANK_8) == 0:
-                    self.castleRight = self.castleRight.replace('q','')
-            elif type == 'k':
-                self.BK = self.doMoveHelperKing(move, self.BK, undoMove)
-                self.updateHash(move, 11, undoMove)
-                undoMove.append(('castle', self.castleRight))
-                self.castleRight = self.castleRight.replace('kq','')
+                if self.BR & int(FILE_A) & int(RANK_8) == 0 and self.castleRight & q_Flag:
+                    undoMove.append(('castle', self.castleRight)) 
+                    self.castleRight ^= q_Flag
+                if self.BR & int(FILE_H) & int(RANK_8) == 0 and self.castleRight & k_Flag:
+                    undoMove.append(('castle', self.castleRight))
+                    self.castleRight ^= k_Flag
             elif type == 'q':
                 self.BQ = self.doMoveHelper(move, self.BQ, undoMove)
                 self.updateHash(move, 9, undoMove)
-
-            if move['type'] == 'p' and move.get('enPassant'):
-                destination = move['enemy']
-                self.clearDestination(False, destination, undoMove) 
-            elif not move.get('castle') :   
-                destination = move['to']
-                self.clearDestination(False, destination, undoMove) 
-
-
+  
+        self.clearDestination(type.isupper(), move['to'], undoMove)
+        if not self.isWhiteTurn:
+            undoMove.append(('fullmove', self.fullmoveCount))
+            self.fullmoveCount+=1
         self.isWhiteTurn = not self.isWhiteTurn
         undoMove.append(('enPassant', self.enPassant))
-        if move.get('double'):
-            self.enPassant = move['double']
-        else:
-            self.enPassant = '-'
+        self.enPassant = '-'
         self.MOVE_HISTORY.append(undoMove)
         # boardString = getBoardStr(self) #might be replaced with hash function later
         # if boardString in self.STATE_HISTORY:
@@ -922,87 +960,174 @@ class Board:
         BOARD |= (1 << end)
         return BOARD
 
-    def doMoveHelperKing(self, move, BOARD, undoMove:array = None):
-        if not move.get('castle'):
+    def doMoveKing(self, move):
+        undoMove = []
+        type = move['type']
+        castle = move.get('castle')
+        undoMove.append(('castle', self.castleRight))
+        undoMove.append(('enPassant', self.enPassant))
+
+        if not castle:
             start = move['from']
             end = move['to']
-            undoMove.append((move['type'], BOARD))
-            BOARD &= ~(1 << start)
-            BOARD |= (1 << end)
+            if type.isupper():
+                undoMove.append((type, self.WK))
+                self.WK &= ~(1 << start)
+                self.WK |= (1 << end)
+                if self.castleRight & K_Flag: self.castleRight ^= K_Flag
+                if self.castleRight & Q_Flag: self.castleRight ^= Q_Flag
+                self.updateHash(move, 10, undoMove)
+                self.clearDestination(True, end, undoMove)
+            else:
+                undoMove.append((type, self.BK))
+                self.BK &= ~(1 << start)
+                self.BK |= (1 << end)
+                if self.castleRight & k_Flag: self.castleRight ^= k_Flag
+                if self.castleRight & q_Flag: self.castleRight ^= q_Flag
+                self.updateHash(move, 11, undoMove)
+                self.clearDestination(False, end, undoMove) 
         else:
-            type = move['type']
-            castle = move ['castle']
             if type.isupper():
                 if castle == 'q':
-                    undoMove.append((type, BOARD))
-                    undoMove.append(('r', self.WR))
-                    BOARD =(BOARD >> 1)
+                    undoMove.append((type, self.WK))
+                    self.WK >>= 2
+                    self.updateHash({'from':60, 'to':58}, 10, undoMove)
+                    undoMove.append(('R', self.WR))
                     self.WR ^= 72057594037927936
-                    self.WR |=(1 << 60)
+                    self.WR |=(1 << 59)
+                    self.hash ^= self.zobTable[56][6]
+                    self.hash ^= self.zobTable[59][6]
                 elif castle =='k':
-                    undoMove.append((type, BOARD))
-                    undoMove.append(('r', self.WR))
-                    BOARD =(BOARD << 1)
+                    undoMove.append((type, self.WK))
+                    self.WK <<= 2
+                    self.updateHash({'from':60, 'to':62}, 10, undoMove)
+                    undoMove.append(('R', self.WR))
                     self.WR ^= 9223372036854775808
-                    self.WR |=(1 << 60)
-
+                    self.WR |=(1 << 61)
+                    self.hash ^= self.zobTable[63][6]
+                    self.hash ^= self.zobTable[61][6]
+                if self.castleRight & K_Flag: self.castleRight ^= K_Flag
+                if self.castleRight & Q_Flag: self.castleRight ^= Q_Flag
             else:
                 if castle == 'q':
-                    undoMove.append((type, BOARD))
+                    undoMove.append((type, self.BK))
+                    self.BK >>= 2
+                    self.updateHash({'from':4, 'to':2}, 11, undoMove)
                     undoMove.append(('r', self.BR))
-                    BOARD = BOARD >> 1 
                     self.BR ^= 1
-                    self.BR |=(1 << 4)
+                    self.BR |=(1 << 3)
+                    self.hash ^= self.zobTable[0][7]
+                    self.hash ^= self.zobTable[3][7]
                 elif castle == 'k':
-                    undoMove.append((type, BOARD))
+                    undoMove.append((type, self.BK))
+                    self.BK <<= 2
+                    self.updateHash({'from':4, 'to':6}, 11, undoMove)
                     undoMove.append(('r', self.BR))
-                    BOARD = BOARD << 1 
                     self.BR ^= 128
-                    self.BR |=(1 << 4)
-        return BOARD
+                    self.BR |=(1 << 5)
+                    self.hash ^= self.zobTable[7][7]
+                    self.hash ^= self.zobTable[5][7]
+                if self.castleRight & k_Flag: self.castleRight ^= k_Flag
+                if self.castleRight & q_Flag: self.castleRight ^= q_Flag
+            undoMove.append(('halfmove', self.halfmoveClock))
+            self.halfmoveClock += 1
 
+        if not self.isWhiteTurn:
+            undoMove.append(('fullmove', self.fullmoveCount))
+            self.fullmoveCount+=1
+        self.isWhiteTurn = not self.isWhiteTurn
+        self.enPassant = '-'
+        self.MOVE_HISTORY.append(undoMove)
 
-    def doMoveHelperPawn(self, move, BOARD, undoMove:array = None):
-        oldBoard = BOARD
+    def doMovePawn(self, move):
+        undoMove = []
         start = move['from']
         end = move['to']
+        type = move['type']
+        undoMove.append(('enPassant', self.enPassant))
+
         if not move.get('isPromo'):
-            if (((BOARD >> start) & 1) == 1):
-                BOARD &= ~(1 << start)
-                BOARD |= (1 << end)
-                undoMove.append((move['type'], oldBoard))
+            if move.get('enPassant'):
+                destination = move['enemy']
+            else:
+                destination = end
+            
+            if type.isupper():
+                undoMove.append((type, self.WP))
+                self.WP &= ~(1 << start)
+                self.WP |= (1 << end)
+
+                self.updateHash(move, 0, undoMove)
+                self.clearDestination(True, destination, undoMove)
+
+            else:
+                undoMove.append((type, self.BP))
+                self.BP &= ~(1 << start)
+                self.BP |= (1 << end)
+                self.updateHash(move, 1, undoMove)
+                self.clearDestination(False, destination, undoMove) 
+
+            if move.get('double'):
+                self.enPassant = move['double']
+            else:
+                self.enPassant = '-'
+
         else:
-            if (((BOARD >> start) & 1) == 1):
-                BOARD &= ~(1 << start)
-                type = move['promoType']
-                if type == 'Q':
-                    oldBoard2 = self.WQ
-                    self.WQ |= (1 << end)
-                elif type == 'R':
-                    oldBoard2 = self.WR
-                    self.WR |= (1 << end)
-                elif type == 'B':
-                    oldBoard2 = self.WB
-                    self.WB |= (1 << end)
-                elif type == 'N':
-                    oldBoard2 = self.WN
-                    self.WN |= (1 << end)
-                elif type == 'q':
-                    oldBoard2 = self.BQ
-                    self.BQ |= (1 << end)
-                elif type == 'r':
-                    oldBoard2 = self.BR
-                    self.BR |= (1 << end)
-                elif type == 'b':
-                    oldBoard2 = self.BB
-                    self.BB |= (1 << end)
-                elif type == 'n':
-                    oldBoard2 = self.BN
-                    self.BN |= (1 << end)
+            undoMove.append(('hash', self.hash))
+            if type.isupper():
+                undoMove.append((type, self.WP))
+                self.WP &= ~(1 << start)
+                self.hash ^= self.zobTable[start][0]
+            else:
+                undoMove.append((type, self.BP))
+                self.BP &= ~(1 << start)
+                self.hash ^= self.zobTable[start][1]
 
-                undoMove.extend([(move['type'], oldBoard),(type,oldBoard2)])
+            promoType = move['promoType']
+            if promoType == 'Q':
+                oldBoard = self.WQ
+                self.WQ |= (1 << end)
+                self.hash ^= self.zobTable[end][8]
+            elif promoType == 'R':
+                oldBoard = self.WR
+                self.WR |= (1 << end)
+                self.hash ^= self.zobTable[end][6]
+            elif promoType == 'B':
+                oldBoard = self.WB
+                self.WB |= (1 << end)
+                self.hash ^= self.zobTable[end][4]
+            elif promoType == 'N':
+                oldBoard = self.WN
+                self.WN |= (1 << end)
+                self.hash ^= self.zobTable[end][2]
+            elif promoType == 'q':
+                oldBoard = self.BQ
+                self.BQ |= (1 << end)
+                self.hash ^= self.zobTable[end][9]
+            elif promoType == 'r':
+                oldBoard = self.BR
+                self.BR |= (1 << end)
+                self.hash ^= self.zobTable[end][7]
+            elif promoType == 'b':
+                oldBoard = self.BB
+                self.BB |= (1 << end)
+                self.hash ^= self.zobTable[end][5]
+            elif promoType == 'n':
+                oldBoard = self.BN
+                self.BN |= (1 << end)
+                self.hash ^= self.zobTable[end][3]
 
-        return BOARD
+            undoMove.append((promoType, oldBoard))
+            undoMove.append(('halfmove', self.halfmoveClock))
+            self.enPassant = '-'
+
+        if not self.isWhiteTurn:
+            undoMove.append(('fullmove', self.fullmoveCount))
+            self.fullmoveCount+=1
+        undoMove.append(('enPassant', self.enPassant))
+        self.halfmoveClock = 0
+        self.isWhiteTurn = not self.isWhiteTurn
+        self.MOVE_HISTORY.append(undoMove)
 
     def updateHash(self, move, value, undoMove:array):
         start = move['from']
@@ -1012,44 +1137,72 @@ class Board:
         self.hash ^=self.zobTable[end][value]
 
     def clearDestination(self, isWhite:bool, destination:int, undoMove:array):
+        undoMove.append(('halfmove', self.halfmoveClock))
         if isWhite:
             if (((self.BP >> destination) & 1) == 1):
                 undoMove.append(('p', self.BP))
                 self.BP &= ~(1 << destination)
+                self.hash ^=self.zobTable[destination][1]
+                self.halfmoveClock = 0
             elif (((self.BN >> destination) & 1) == 1):
                 undoMove.append(('n', self.BN))
                 self.BN&=~(1<<destination)
+                self.hash ^=self.zobTable[destination][3]
+                self.halfmoveClock = 0
             elif (((self.BQ >> destination) & 1) == 1):
                 undoMove.append(('q', self.BQ))
                 self.BQ&=~(1<<destination)
+                self.hash ^=self.zobTable[destination][9]
+                self.halfmoveClock = 0
             elif (((self.BB >> destination) & 1) == 1):
                 undoMove.append(('b', self.BB))
                 self.BB&=~(1<<destination)
+                self.hash ^=self.zobTable[destination][5]
+                self.halfmoveClock = 0
             elif (((self.BR >> destination) & 1) == 1):
                 undoMove.append(('r', self.BR))
                 self.BR&=~(1<<destination)
+                self.hash ^=self.zobTable[destination][7]
+                self.halfmoveClock = 0
             elif (((self.BK >> destination) & 1) == 1):
                 undoMove.append(('k', self.BK))
                 self.BK&=~(1<<destination) 
+                self.hash ^=self.zobTable[destination][11]
+                self.halfmoveClock = 0
+            else:
+                self.halfmoveClock += 1
         else:
             if (((self.WP >> destination) & 1) == 1):
                 undoMove.append(('P', self.WP))
                 self.WP &= ~(1 << destination)
+                self.hash ^=self.zobTable[destination][0]
+                self.halfmoveClock = 0
             elif (((self.WN >> destination) & 1) == 1):
                 undoMove.append(('N', self.WN))
                 self.WN&=~(1<<destination)
+                self.hash ^=self.zobTable[destination][2]
+                self.halfmoveClock = 0
             elif (((self.WQ >> destination) & 1) == 1):
                 undoMove.append(('Q', self.WQ))
                 self.WQ&=~(1<<destination)
+                self.hash ^=self.zobTable[destination][8]
+                self.halfmoveClock = 0
             elif (((self.WB >> destination) & 1) == 1):
                 undoMove.append(('B', self.WB))
                 self.WB&=~(1<<destination)
+                self.hash ^=self.zobTable[destination][4]
             elif (((self.WR >> destination) & 1) == 1):
                 undoMove.append(('R', self.WR))
                 self.WR&=~(1<<destination)
+                self.hash ^=self.zobTable[destination][6]
+                self.halfmoveClock = 0
             elif (((self.WK >> destination) & 1) == 1):
                 undoMove.append(('K', self.WK))
                 self.WK&=~(1<<destination) 
+                self.hash ^=self.zobTable[destination][10]
+                self.halfmoveClock = 0
+            else:
+                self.halfmoveClock += 1
 
     def undoLastMove(self):
         if len(self.MOVE_HISTORY) == 0:
@@ -1088,6 +1241,10 @@ class Board:
                 self.enPassant = value
             elif type == 'hash':
                 self.hash = value
+            elif type == 'fullmove':
+                self.fullmoveCount = value
+            elif type == 'halfmove':
+                self.halfmoveClock = value
         self.isWhiteTurn = not self.isWhiteTurn        
     
     def printBoard(self):
@@ -1130,6 +1287,61 @@ class Board:
         
         return value 
         
+    def evaluateMove(self, isWhite, ownValue, destination):
+        if isWhite:
+            if (((self.BP >> destination) & 1) == 1):
+                return 1  
+            elif (((self.BN >> destination) & 1) == 1):
+                if ownValue < 3:
+                    return 3
+                else:
+                    return 1 
+            elif (((self.BQ >> destination) & 1) == 1):
+                if ownValue < 9:
+                    return 9
+                else:
+                    return 1             
+            elif (((self.BB >> destination) & 1) == 1):
+                if ownValue < 3:
+                    return 3
+                else:
+                    return 1            
+            elif (((self.BR >> destination) & 1) == 1):
+                if ownValue < 5:
+                    return 5
+                else:
+                    return 1 
+            elif (((self.BK >> destination) & 1) == 1):
+                    return 9           
+            else:
+                return 0
+        else:
+            if (((self.WP >> destination) & 1) == 1):
+                return 1 
+            elif (((self.WN >> destination) & 1) == 1):
+                if ownValue < 3:
+                    return 3
+                else:
+                    return 1 
+            elif (((self.WQ >> destination) & 1) == 1):
+                if ownValue < 9:
+                    return 9
+                else:
+                    return 1  
+            elif (((self.WB >> destination) & 1) == 1):
+                if ownValue < 3:
+                    return 3
+                else:
+                    return 1  
+            elif (((self.WR >> destination) & 1) == 1):
+                if ownValue < 5:
+                    return 5
+                else:
+                    return 1 
+            elif (((self.WK >> destination) & 1) == 1):
+              return 9
+            else:
+                return 0    
     
 # //////////////////////////////////////////////////////
 #
