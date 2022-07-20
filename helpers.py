@@ -3,16 +3,8 @@ from random import randint, random
 from time import time
 import numpy as np
 
-# TODO Move away from string op
 def trailingZeros(v):
      return (v & -v).bit_length() - 1
-
-# TODO buggy!
-# def countTrailingZeros(v):
-#     res = np.int(np.log2(np.bitwise_xor(v,v - ONE)))
-#     if res < 0:
-#         res = 0
-#     return res 
 
 def strBBtoBB(str):
     bbStr = str.replace("\n","").replace(" ","")
@@ -81,7 +73,7 @@ def getBoardStr(board):
     return result
 
 def countSetBits(number):
-    return bin(number).count('1') #ineffizient, da string operation. 
+    return bin(number).count('1') 
 
 def pickRandom(list):
     randIndex = randint(0, len(list)-1)

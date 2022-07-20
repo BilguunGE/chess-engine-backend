@@ -227,18 +227,18 @@ class Board:
                 hash ^= self.zobTable[i][10]
             elif (self.BK >> i) & 1 == 1:
                 hash ^= self.zobTable[i][11]
-        # if self.enPassant in squareNames:
-        #     hash ^= self.zobEnPass[int(self.enPassant[1])-1]
-        # if "K" in self.castleRight:
-        #     hash ^= self.zobCastle[0]
-        # if "Q" in self.castleRight:
-        #     hash ^= self.zobCastle[1]
-        # if "k" in self.castleRight:
-        #     hash ^= self.zobCastle[2]
-        # if "q" in self.castleRight:
-        #     hash ^= self.zobCastle[3]  
-        # if not self.isWhiteTurn:
-        #     hash ^= self.zobTurn
+        if self.enPassant in squareNames:
+            hash ^= self.zobEnPass[int(self.enPassant[1])-1]
+        if K_Flag & self.castleRight > 0:
+            hash ^= self.zobCastle[0]
+        if Q_Flag & self.castleRight > 0:
+            hash ^= self.zobCastle[1]
+        if k_Flag & self.castleRight > 0:
+            hash ^= self.zobCastle[2]
+        if q_Flag & self.castleRight > 0:
+            hash ^= self.zobCastle[3]  
+        if not self.isWhiteTurn:
+            hash ^= self.zobTurn
 
         self.hash = hash
         return hash
@@ -1316,7 +1316,7 @@ class Board:
         binary.extend(bin(self.WK)[2:].zfill(64))
         binary.extend(bin(self.BK)[2:].zfill(64))
         binary.extend([int(self.isWhiteTurn)])
-        binary.extend(['K' in self.castleRight, 'Q' in self.castleRight, 'k' in self.castleRight,'q' in self.castleRight])
+        binary.extend([K_Flag & self.castleRight > 0, Q_Flag & self.castleRight > 0, k_Flag & self.castleRight > 0,q_Flag & self.castleRight > 0])
         en_passant = [0]*64
         if self.enPassant != '-':
             file = 8 - int(self.enPassant[1])
