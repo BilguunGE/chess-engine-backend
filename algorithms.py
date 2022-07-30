@@ -37,7 +37,7 @@ def minimax(board, depth, isMax, playerAtMoveFactor, shouldSave):
             board.undoLastMove()
         return value    
         
-def alphaBeta(board, depth, alpha, beta, isMax, shouldSave, stopTime, counter={"count":0}):
+def alphaBeta(board, depth, alpha, beta, isMax, shouldSave, stopTime, useNN, counter={"count":0}):
     counter["count"] += 1
     if isTimeUp(stopTime): print("Time up!!!")
     if isMax:
@@ -45,7 +45,7 @@ def alphaBeta(board, depth, alpha, beta, isMax, shouldSave, stopTime, counter={"
     else:
         minmaxFactor = -1
     if (depth == 0) or board.isGameDone() or isTimeUp(stopTime):
-        return minmaxFactor * board.evaluate() * (1.1**depth)
+        return minmaxFactor * board.evaluateNN().item() * (1.1**depth) if useNN else minmaxFactor * board.evaluate() * (1.1**depth)
     moves = board.getMoves()
     if isMax:
         value = alpha
@@ -58,14 +58,14 @@ def alphaBeta(board, depth, alpha, beta, isMax, shouldSave, stopTime, counter={"
                     score = board.ttable[hash]["score"]
                 else:
                     #UPDATE
-                    score = alphaBeta(board, depth - 1,value, beta, 0, 0, stopTime, counter)
+                    score = alphaBeta(board, depth - 1,value, beta, 0, 0, stopTime, useNN, counter)
                     if isTimeUp(stopTime):
                         score = board.ttable[hash]["score"]
                     else:
                         board.ttable[hash] = { "score" : score, "depth" : depth-1, "move" : move }
             else:
                 #CREATE
-                score = alphaBeta(board, depth - 1, value, beta, 0, 0, stopTime, counter) 
+                score = alphaBeta(board, depth - 1, value, beta, 0, 0, stopTime, useNN ,counter) 
                 if not (isTimeUp(stopTime)):
                     board.ttable[hash] = { "score" : score, "depth" : depth-1, "move" : move }
             value = max(value, score)
@@ -86,14 +86,14 @@ def alphaBeta(board, depth, alpha, beta, isMax, shouldSave, stopTime, counter={"
                     score = board.ttable[hash]["score"]
                 else:
                     #UPDATE
-                    score = alphaBeta(board, depth - 1, alpha, value, 1, 0, stopTime, counter)
+                    score = alphaBeta(board, depth - 1, alpha, value, 1, 0, stopTime, useNN, counter)
                     if isTimeUp(stopTime):
                         score = board.ttable[hash]["score"]
                     else:
                         board.ttable[hash] = { "score" : score, "depth" : depth-1, "move" : move }
             else:
                 #CREATE
-                score = alphaBeta(board, depth - 1, alpha, value, 1, 0, stopTime, counter) 
+                score = alphaBeta(board, depth - 1, alpha, value, 1, 0, stopTime, useNN, counter) 
                 if not (isTimeUp(stopTime)):
                     board.ttable[hash] = { "score" : score, "depth" : depth-1, "move" : move }
             value = min(value, score)

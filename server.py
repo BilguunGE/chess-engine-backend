@@ -26,4 +26,5 @@ def alphabeta():
     ALPHA = int(request.json['alpha'])
     BETA = int(request.json['beta'])
     STOPTIME = int(request.json['stopTime'])
-    return route.alphaBetaMove(DEPTH, ALPHA, BETA, STOPTIME)
+    USE_NN = int(request.json['useNN'])
+    return route.alphaBetaMove(DEPTH, ALPHA, BETA, STOPTIME, USE_NN)

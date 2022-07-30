@@ -5,6 +5,9 @@ import numpy as np
 from helpers import *
 from constants import *
 from copy import copy
+from model import EvaluationModel
+import torch
+import bitarray
 
 
 class Board:
@@ -63,11 +66,14 @@ class Board:
         ["R", "N", "B", "Q", "K", "B", "N", "R"],
     ]
 
+    model = EvaluationModel(layer_count=4,batch_size=1024,learning_rate=1e-3)
+
     def __init__(self, fenString=None):
         self.fenString = fenString
         self.initBoard()
         self.convertArraysToBitboards()
         self.genZobHash()
+        self.model.load_state_dict(torch.load('models/model_2-3.pt'))
 
     def initBoard(self):
         if not self.fenString is None:
@@ -218,18 +224,18 @@ class Board:
                 hash ^= self.zobTable[i][10]
             elif (self.BK >> i) & 1 == 1:
                 hash ^= self.zobTable[i][11]
-        # if self.enPassant in squareNames:
-        #     hash ^= self.zobEnPass[int(self.enPassant[1])-1]
-        # if "K" in self.castleRight:
-        #     hash ^= self.zobCastle[0]
-        # if "Q" in self.castleRight:
-        #     hash ^= self.zobCastle[1]
-        # if "k" in self.castleRight:
-        #     hash ^= self.zobCastle[2]
-        # if "q" in self.castleRight:
-        #     hash ^= self.zobCastle[3]  
-        # if not self.isWhiteTurn:
-        #     hash ^= self.zobTurn
+        if self.enPassant in squareNames:
+            hash ^= self.zobEnPass[int(self.enPassant[1])-1]
+        if K_Flag & self.castleRight > 0:
+            hash ^= self.zobCastle[0]
+        if Q_Flag & self.castleRight > 0:
+            hash ^= self.zobCastle[1]
+        if k_Flag & self.castleRight > 0:
+            hash ^= self.zobCastle[2]
+        if q_Flag & self.castleRight > 0:
+            hash ^= self.zobCastle[3]  
+        if not self.isWhiteTurn:
+            hash ^= self.zobTurn
 
         self.hash = hash
         return hash
@@ -1349,6 +1355,12 @@ class Board:
         printBits(self.BR, 'Black Rooks')
         printBits(self.BK, 'Black King')
         
+# //////////////////////////////////////////////////////
+#
+#                    Evaluation
+#
+# //////////////////////////////////////////////////////
+        
     def evaluate(self):
         value = 0
         colorfactor = -1
@@ -1374,6 +1386,41 @@ class Board:
         
         return value 
         
+    def evaluateNN(self):
+        #layer = 4 - model_2-3 layer = 6 - model_2-22
+        self.model.eval()
+        binary = bitarray.bitarray()
+        binary.extend(bin(self.WP)[2:].zfill(64))
+        binary.extend(bin(self.BP)[2:].zfill(64))
+        binary.extend(bin(self.WK)[2:].zfill(64))
+        binary.extend(bin(self.BK)[2:].zfill(64))
+        binary.extend(bin(self.WB)[2:].zfill(64))
+        binary.extend(bin(self.BB)[2:].zfill(64))
+        binary.extend(bin(self.WR)[2:].zfill(64))
+        binary.extend(bin(self.BR)[2:].zfill(64))
+        binary.extend(bin(self.WQ)[2:].zfill(64))
+        binary.extend(bin(self.BQ)[2:].zfill(64))
+        binary.extend(bin(self.WK)[2:].zfill(64))
+        binary.extend(bin(self.BK)[2:].zfill(64))
+        binary.extend([int(self.isWhiteTurn)])
+        binary.extend([K_Flag & self.castleRight > 0, Q_Flag & self.castleRight > 0, k_Flag & self.castleRight > 0,q_Flag & self.castleRight > 0])
+        en_passant = [0]*64
+        if self.enPassant != '-':
+            file = 8 - int(self.enPassant[1])
+            rank = ord(self.enPassant[0]) - ord('a')
+            en_passant[file + rank*8] = 1
+        binary.extend(en_passant[16:23])
+        binary.extend(en_passant[40:47])
+        binary.extend(bin(self.halfmoveClock)[2:].zfill(8))
+        binary.extend(bin(self.fullmoveCount)[2:].zfill(8))
+        last = binary[-3:]
+        binary = binary[:-3]
+        binary.extend('00000')
+        binary.extend(last)
+        binary = np.asarray(binary.tolist()).astype(np.single)
+        x = torch.from_numpy(binary)
+        return self.model(x)
+    
     def evaluateMove(self, isWhite, ownValue, destination):
         if isWhite:
             if (((self.BP >> destination) & 1) == 1):

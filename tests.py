@@ -31,13 +31,33 @@ def testEvaluationSpeed(board, iterations):
         i+=1
     print(sum(list)/1000)
     
+def testNNEvaluationSpeed(board, iterations):
+    i = 0 
+    list =[]
+    while i < iterations:
+        start = time()
+        board.evaluateNN()
+        list.append(time()-start)
+        i+=1
+    print(sum(list)/1000)
+    
     
 def testAlphaBeta(board, depth, stopTime, iterations):
     i = 0
     list = []
     while i< iterations:
         start = time()
-        alphaBeta(board,depth,-10000,10000,1,1,stopTime)
+        alphaBeta(board,depth,-10000,10000,1,1,stopTime, 0)
+        list.append(time()-start)
+        i += 1
+    print(str((sum(list)*1000)/len(list))+"ms")
+    
+def testAlphaBetaNN(board, depth, stopTime, iterations):
+    i = 0
+    list = []
+    while i< iterations:
+        start = time()
+        alphaBeta(board,depth,-10000,10000,1,1,stopTime, 1)
         list.append(time()-start)
         i += 1
     print(str((sum(list)*1000)/len(list))+"ms")
@@ -48,7 +68,7 @@ def testAlphaBetaNewTT(fen, depth, stopTime, iterations):
     while i< iterations:
         board = Board(fen)
         start = time()
-        alphaBeta(board,depth,-10000,10000,1,1,stopTime)
+        alphaBeta(board,depth,-10000,10000,1,1,stopTime, 0)
         list.append(time()-start)
         i += 1
     print(str((sum(list)*1000)/len(list))+"ms")
@@ -138,7 +158,7 @@ def mst3(boards, maxDepth, iterations):
             while i < iterations:
                 bestMoves.clear()
                 start = time()
-                # value = alphaBeta(board, depth, -10000, 10000, 1, 1, time()*1000+120000,stateCount )
+                # value = alphaBeta(board, depth, -10000, 10000, 1, 1, time()*1000+120000,0,stateCount )
                 value = alphaBetaNoHash(board, depth, -10000, 10000, 1, 1, stateCount)
                 timeList.append(time()-start)
                 valueList.append(value)
