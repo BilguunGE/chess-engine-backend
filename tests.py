@@ -3,6 +3,7 @@ from Board import *
 from helpers import *
 from algorithms import *
 import json
+from mcts import MCTS
 
 # //////////////////////////////////////////////////////
 #
@@ -198,12 +199,10 @@ firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 start = time()
 
 # mst3([startGame,midGame,endGame],3, 10)
+# print(testMoveGenSpeed(startGame,10000))
 # simpleTest()
 # moveTest()
-# testNNEvaluationSpeed(startGame, 1000)
-# testEvaluationSpeed(startGame, 1000)
-# testAlphaBeta(startGame, 3,start*1000 + 120000, 10)
-testAlphaBetaNN(startGame, 3, start*1000 + 120000, 10)
-
-
+move = MCTS().findNextMove(endGame, start+20)
+print(move)
+# print(midGame.getMoves())
 print(f"\nTest took {time() - start} seconds.\n")
