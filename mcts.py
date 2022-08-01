@@ -3,6 +3,7 @@ from random import randint
 from time import time
 from Board import Board
 
+ttable = {}
 class State:
     board:Board
     visitCount:int = 0
@@ -28,9 +29,11 @@ class State:
 
     def incrementVisit(self):
         self.visitCount+=1
+        ttable[self.board.hash] = {"winScore" : self.winScore, "visits":self.visitCount}
 
     def addScore(self, value):
         self.winScore+=value
+        ttable[self.board.hash] = {"winScore" : self.winScore, "visits":self.visitCount}
 
 class Node:
     state:State
@@ -44,10 +47,19 @@ class Node:
 
     def getRandomChildNode(self):
         index = randint(0, len(self.children)-1)
-        return self.children[index]
+        child = self.children[index]
+        if ttable.get(self.state.board.hash):
+            tentry = ttable.get(self.state.board.hash)
+            child.state.visitCount = tentry.get('visits') or 0
+            child.state.winScore = tentry.get('winScore') or 0
+        return child
 
-    def getChildWithMaxScore(self):
-        return max(self.children, key=lambda x: x.state.winScore)
+    def getChildWithMaxScore(self, movesList = None):
+        if not movesList is None:
+            filteredChildren = filter(lambda elem: elem.state.move.get('toString') in movesList, self.children)
+            return max(filteredChildren, key=lambda x: x.state.winScore)
+        else:
+            return max(self.children, key=lambda x: x.state.winScore)
 
 class Tree:
     node:Node
