@@ -1,6 +1,7 @@
 from Board import *
 from helpers import *
 from algorithms import *
+from mcts import MCTS
 
 current_board  = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
 
@@ -23,4 +24,9 @@ def alphaBetaMove(depth, alpha, beta, stopTime, useNN):
     printBestMoves(bestMoves)
     bestMove = pickRandomBest(bestMoves)
     return { "move" : bestMove["move"]["toString"], "value": bestMove["value"], "depth":depth }
+
+def mctsMove(moves, endTime):
+    move = MCTS().findNextMove(current_board, endTime, moves)
+    return { "move" : move[0]['toString'], "winScore":move[1] }
+
     

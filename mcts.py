@@ -1,18 +1,22 @@
 import math
 from random import randint
-from time import time
 from Board import Board
-
-ttable = {}
+from helpers import isTimeUp
 class State:
     board:Board
     visitCount:int = 0
     winScore:int = 0
     move:any
+    isRoot = False
     
-    def getAllPossibleStates(self):
+    def getAllPossibleStates(self, filterMoves:list = None):
         states = []
-        moves = self.board.getMoves()
+        if self.isRoot and filterMoves:
+            allMoves = self.board.getMoves()
+            moves = filter(lambda x: x['toString'] in filterMoves, allMoves)
+        else:    
+            moves = self.board.getMoves()
+
         for move in moves:
             self.board.doMove(move)
             state = State()
@@ -29,11 +33,9 @@ class State:
 
     def incrementVisit(self):
         self.visitCount+=1
-        ttable[self.board.hash] = {"winScore" : self.winScore, "visits":self.visitCount}
 
     def addScore(self, value):
         self.winScore+=value
-        ttable[self.board.hash] = {"winScore" : self.winScore, "visits":self.visitCount}
 
 class Node:
     state:State
@@ -47,19 +49,10 @@ class Node:
 
     def getRandomChildNode(self):
         index = randint(0, len(self.children)-1)
-        child = self.children[index]
-        if ttable.get(self.state.board.hash):
-            tentry = ttable.get(self.state.board.hash)
-            child.state.visitCount = tentry.get('visits') or 0
-            child.state.winScore = tentry.get('winScore') or 0
-        return child
+        return self.children[index]
 
-    def getChildWithMaxScore(self, movesList = None):
-        if not movesList is None:
-            filteredChildren = filter(lambda elem: elem.state.move.get('toString') in movesList, self.children)
-            return max(filteredChildren, key=lambda x: x.state.winScore)
-        else:
-            return max(self.children, key=lambda x: x.state.winScore)
+    def getChildWithMaxScore(self):
+        return max(self.children, key=lambda x: x.state.winScore)
 
 class Tree:
     node:Node
@@ -71,17 +64,22 @@ class MCTS:
     UTC_CONSTANT = 1.41 # we need proper value
     OPPONENT:bool
 
-    def findNextMove(self, board:Board, endTime):
+    def findNextMove(self, board:Board, endTime, filterMoves:list = None):
         tree = Tree()
         self.OPPONENT = not board.isWhiteTurn
         rootNode = tree.node
         rootNode.player = board.isWhiteTurn
         rootNode.state.board = board
+        rootNode.state.isRoot = True
 
-        while time() < endTime:
+        while not isTimeUp(endTime):
             promisingNode = self.selectPromisingNode(rootNode)
             if not promisingNode.state.board.isGameDone(): 
-                self.expandNode(promisingNode)
+                if promisingNode.state.isRoot and filterMoves:
+                    self.expandNode(promisingNode, filterMoves)
+                else:
+                    self.expandNode(promisingNode)
+
             
             nodeToExplore = promisingNode
             if len(promisingNode.children) > 0 :
@@ -91,7 +89,7 @@ class MCTS:
             self.backPropogation(nodeToExplore, playoutResult)
 
         winnerNode:Node = rootNode.getChildWithMaxScore()
-        tree.node = winnerNode
+        rootNode.children.clear()
         return (winnerNode.state.move, winnerNode.state.winScore)
 
 
@@ -102,8 +100,8 @@ class MCTS:
         return node
 
     ## EXPANSION
-    def expandNode(self, node:Node):
-        possibleStates:list[State] = node.state.getAllPossibleStates()
+    def expandNode(self, node:Node, filterMoves:list = None):
+        possibleStates:list[State] = node.state.getAllPossibleStates(filterMoves)
         for state in possibleStates:
             newNode = Node(state)
             newNode.parent = node
@@ -150,8 +148,3 @@ class MCTS:
     def findBestNodeWithUCT(self,  node:Node):
         parentVisit = node.state.visitCount
         return max(node.children,key=lambda x: self.uctValue(parentVisit, x.state.winScore, x.state.visitCount) )
-    
-
-
-
-

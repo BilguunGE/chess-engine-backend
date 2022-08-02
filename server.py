@@ -26,5 +26,12 @@ def alphabeta():
     ALPHA = int(request.json['alpha'])
     BETA = int(request.json['beta'])
     STOPTIME = int(request.json['stopTime'])
-    USE_NN = int(request.json['useNN'])
+    USE_NN = int(request.json.get('useNN') or False)
     return route.alphaBetaMove(DEPTH, ALPHA, BETA, STOPTIME, USE_NN)
+
+@app.route('/mcts', methods=['POST'])
+@cross_origin()
+def mcts():
+    movesList = request.json['moves']
+    STOPTIME = int(request.json['stopTime'])
+    return route.mctsMove(movesList, STOPTIME)
