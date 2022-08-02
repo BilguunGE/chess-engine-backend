@@ -1517,4 +1517,4 @@ class Board:
         return False
 
     def didOpponentWin(self, opponentIsWhite):
-        return self.isGameDone() and not self.isWhiteTurn == opponentIsWhite
+        return self.isGameDone() and self.isWhiteTurn == opponentIsWhite
