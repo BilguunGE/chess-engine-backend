@@ -26,7 +26,7 @@ def alphaBetaMove(depth, alpha, beta, stopTime, useNN):
     return { "move" : bestMove["move"]["toString"], "value": bestMove["value"], "depth":depth }
 
 def mctsMove(moves, endTime):
-    move = MCTS().findNextMove(current_board, endTime, moves)
+    move = MCTS().findNextMove(current_board, time() + endTime/1000, moves)
     return { "move" : move[0]['toString'], "winScore":move[1] }
 
     

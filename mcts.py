@@ -1,7 +1,7 @@
 import math
 from random import randint
+from time import time
 from Board import Board
-from helpers import isTimeUp
 class State:
     board:Board
     visitCount:int = 0
@@ -71,14 +71,16 @@ class MCTS:
         rootNode.player = board.isWhiteTurn
         rootNode.state.board = board
         rootNode.state.isRoot = True
+        expansions = 0
 
-        while not isTimeUp(endTime):
+        while time() < endTime:
             promisingNode = self.selectPromisingNode(rootNode)
             if not promisingNode.state.board.isGameDone(): 
                 if promisingNode.state.isRoot and filterMoves:
                     self.expandNode(promisingNode, filterMoves)
                 else:
                     self.expandNode(promisingNode)
+                expansions+=1
 
             
             nodeToExplore = promisingNode
@@ -89,6 +91,7 @@ class MCTS:
             self.backPropogation(nodeToExplore, playoutResult)
 
         winnerNode:Node = rootNode.getChildWithMaxScore()
+        print("visitCounts/simulations: "+str(rootNode.state.visitCount)+ " || expansions: "+str(expansions))
         rootNode.children.clear()
         return (winnerNode.state.move, winnerNode.state.winScore)
 

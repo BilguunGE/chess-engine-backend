@@ -179,6 +179,12 @@ Search depth {depth}:
         print("\n\n\n")
     print()
 
+def mctsTest():
+    t1 = Board('k7/8/8/8/8/3K4/8/8 w - - 0 1')
+    t1Res = 'Kd3d4'
+    move, score  = MCTS().findNextMove(t1, time()+5, list(map(getMoveToString, t1.getMoves())))
+    print(t1Res == move.get('toString'))
+
 # //////////////////////////////////////////////////////
 #
 #                    Scenarios
@@ -202,7 +208,6 @@ start = time()
 # print(testMoveGenSpeed(startGame,10000))
 # simpleTest()
 # moveTest()
-move = MCTS().findNextMove(endGame, start+20)
-print(move)
+mctsTest()
 # print(midGame.getMoves())
 print(f"\nTest took {time() - start} seconds.\n")
