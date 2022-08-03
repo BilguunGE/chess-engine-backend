@@ -140,8 +140,36 @@ def moveTest():
     print('All right')
     
 def mctsTest(board):
-    move, score  = MCTS().findNextMove(board, time()+5, list(map(getMoveToString, board.getMoves())))
+    moves = list(map(getMoveToString, board.getMoves()))
+    move, score  = MCTS().findNextMove(board, time()+5, moves)
     print(move.get('toString'))
+    
+def testHist(board):
+    moves = board.getMoves()
+    print(board.STATE_HISTORY)
+    board.doMove(moves[0])
+    print(board.STATE_HISTORY)
+    board.undoLastMove()
+    print(board.STATE_HISTORY)
+    
+def testFirstOnHillHist(board):
+    
+    i = 0
+    while i < 3:
+        board.doMove({'toString': 'Kb2a3', 'from': 49, 'to': 40, 'type': 'K', 'score': 0})
+        board.doMove({'toString': 'Kg7f8', 'from': 14, 'to': 5, 'type': 'k', 'score': 0})
+        board.doMove({'toString': 'Ka3b2', 'from': 40, 'to': 49, 'type': 'K', 'score': 0})
+        board.doMove({'toString': 'Kf8g7', 'from': 5, 'to': 14, 'type': 'k', 'score': 0})
+        print(board.STATE_HISTORY)
+        print(board.is3Fold())
+        i += 1
+    board.undoAllMoves()
+    print(board.STATE_HISTORY)
+    print(board.is3Fold())
+    
+    
+    
+    
     
 # //////////////////////////////////////////////////////
 #
@@ -162,8 +190,8 @@ def mst3(boards, maxDepth, iterations):
             while i < iterations:
                 board.best_moves.clear()
                 start = time()
-                # value = alphaBeta(board, depth, -10000, 10000, 1, 1, time()*1000+120000,0,stateCount )
-                value = alphaBetaNoHash(board, depth, -10000, 10000, 1, 1, stateCount)
+                value = alphaBeta(board, depth, -10000, 10000, 1, 1, time()*1000+120000,0,stateCount )
+                # value = alphaBetaNoHash(board, depth, -10000, 10000, 1, 1, stateCount)
                 timeList.append(time()-start)
                 valueList.append(value)
                 state_countList.append(stateCount["count"])
@@ -202,7 +230,5 @@ firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 # //////////////////////////////////////////////////////
 
 start = time()
-
-mctsTest(finalMoveGame)
 
 print(f"\nTest took {time() - start} seconds.\n")

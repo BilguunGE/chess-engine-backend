@@ -11,69 +11,69 @@ import bitarray
 
 
 class Board:
-    WP = 0
-    WN = 0
-    WB = 0
-    WR = 0
-    WQ = 0
-    WK = 0
-    BP = 0
-    BN = 0
-    BB = 0
-    BR = 0
-    BQ = 0
-    BK = 0
-    
-    MY_PIECES = 0
-    NOT_MY_PIECES =  0
-
-    EMPTY = 0
-    OCCUPIED = 0
-
-    hash = -1
-    moves = []
-    best_moves = []
-    MOVE_HISTORY = []
-    STATE_HISTORY = {} #später transpostion table?
-    zobTable = [[(randint(1,2**64 - 1)) for i in range(12)]for j in range(64)]
-    zobEnPass = [(randint(1,2**64 - 1)) for i in range(8)]
-    zobCastle = [(randint(1,2**64 - 1)) for i in range(4)]
-    zobTurn = (randint(1,2**64 - 1))
-    ttable = {} 
-    """
-    Table entries with form:
-    ```
-    12345678738627 : {
-            "score": 123,
-            "depth": 3,
-            "move" : moveObject,
-    }
-    ```
-    """
-    
-    isWhiteTurn = True
-    castleRight = 15 #1111 default
-    enPassant = "-"
-    halfmoveClock = 0
-    fullmoveCount = 1
-    chessBoard = [
-        ["r", "n", "b", "q", "k", "b", "n", "r"],
-        ["p", "p", "p", "p", "p", "p", "p", "p"],
-        ["", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "", ""],
-        ["P", "P", "P", "P", "P", "P", "P", "P"],
-        ["R", "N", "B", "Q", "K", "B", "N", "R"],
-    ]
-
-    model = EvaluationModel(layer_count=4,batch_size=1024,learning_rate=1e-3)
-
     def __init__(self, fenString=None):
+        self.WP = 0
+        self.WN = 0
+        self.WB = 0
+        self.WR = 0
+        self.WQ = 0
+        self.WK = 0
+        self.BP = 0
+        self.BN = 0
+        self.BB = 0
+        self.BR = 0
+        self.BQ = 0
+        self.BK = 0
+
+        self.MY_PIECES = 0
+        self.NOT_MY_PIECES =  0
+
+        self.EMPTY = 0
+        self.OCCUPIED = 0
+
+        self.hash = -1
+        self.moves = []
+        self.best_moves = []
+        self.MOVE_HISTORY = []
+        self.STATE_HISTORY = {}
+        self.zobTable = [[(randint(1,2**64 - 1)) for i in range(12)]for j in range(64)]
+        self.zobEnPass = [(randint(1,2**64 - 1)) for i in range(8)]
+        self.zobCastle = [(randint(1,2**64 - 1)) for i in range(4)]
+        self.zobTurn = (randint(1,2**64 - 1))
+        self.ttable = {} 
+        """
+        Table entries with form:
+        ```
+        12345678738627 : {
+                "score": 123,
+                "depth": 3,
+                "move" : moveObject,
+        }
+        ```
+        """
+
+        self.isWhiteTurn = True
+        self.castleRight = 15 #1111 default
+        self.enPassant = "-"
+        self.halfmoveClock = 0
+        self.fullmoveCount = 1
+        self.chessBoard = [
+            ["r", "n", "b", "q", "k", "b", "n", "r"],
+            ["p", "p", "p", "p", "p", "p", "p", "p"],
+            ["", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "", ""],
+            ["P", "P", "P", "P", "P", "P", "P", "P"],
+            ["R", "N", "B", "Q", "K", "B", "N", "R"],
+        ]
+
+        self.model = EvaluationModel(layer_count=4,batch_size=1024,learning_rate=1e-3)
         self.fenString = fenString
         self.initBoard()
         self.convertArraysToBitboards()
-        self.genZobHash()
+        self.genHistHash()
+        self.STATE_HISTORY[self.hash] = 1
         self.model.load_state_dict(torch.load('models/model_2-3.pt'))
 
     def initBoard(self):
@@ -237,9 +237,37 @@ class Board:
             hash ^= self.zobCastle[3]  
         if not self.isWhiteTurn:
             hash ^= self.zobTurn
-
-        self.hash = hash
         return hash
+    
+    def genHistHash(self):
+        hash = 0
+        for i in range(64):
+            if (self.WP >> i) & 1 == 1:
+                hash ^= self.zobTable[i][0]
+            elif (self.BP >> i) & 1 == 1:
+                hash ^= self.zobTable[i][1]
+            elif (self.WN >> i) & 1 == 1:
+                hash ^= self.zobTable[i][2]
+            elif (self.BN >> i) & 1 == 1:
+                hash ^= self.zobTable[i][3]
+            elif (self.WB >> i) & 1 == 1:
+                hash ^= self.zobTable[i][4]
+            elif (self.BB >> i) & 1 == 1:
+                hash ^= self.zobTable[i][5]
+            elif (self.WR >> i) & 1 == 1:
+                hash ^= self.zobTable[i][6]
+            elif (self.BR >> i) & 1 == 1:
+                hash ^= self.zobTable[i][7]
+            elif (self.WQ >> i) & 1 == 1:
+                hash ^= self.zobTable[i][8]
+            elif (self.BQ >> i) & 1 == 1:
+                hash ^= self.zobTable[i][9]
+            elif (self.WK >> i) & 1 == 1:
+                hash ^= self.zobTable[i][10]
+            elif (self.BK >> i) & 1 == 1:
+                hash ^= self.zobTable[i][11]
+        self.hash = hash
+        
     
     def getFEN(self):
         rows = []
@@ -1035,6 +1063,10 @@ class Board:
         undoMove.append(('enPassant', self.enPassant))
         self.enPassant = '-'
         self.MOVE_HISTORY.append(undoMove)
+        if self.hash in self.STATE_HISTORY:
+            self.STATE_HISTORY[self.hash] += 1
+        else:
+            self.STATE_HISTORY[self.hash] = 1
 
     def doMoveHelper(self, move, BOARD, undoMove:array = None):
         if undoMove is not None:
@@ -1124,6 +1156,10 @@ class Board:
         self.isWhiteTurn = not self.isWhiteTurn
         self.enPassant = '-'
         self.MOVE_HISTORY.append(undoMove)
+        if self.hash in self.STATE_HISTORY:
+            self.STATE_HISTORY[self.hash] += 1
+        else:
+            self.STATE_HISTORY[self.hash] = 1
 
     def doMovePawn(self, move):
         undoMove = []
@@ -1213,6 +1249,10 @@ class Board:
         self.halfmoveClock = 0
         self.isWhiteTurn = not self.isWhiteTurn
         self.MOVE_HISTORY.append(undoMove)
+        if self.hash in self.STATE_HISTORY:
+            self.STATE_HISTORY[self.hash] += 1
+        else:
+            self.STATE_HISTORY[self.hash] = 1
 
     def updateHash(self, move, value, undoMove:array):
         start = move['from']
@@ -1293,8 +1333,7 @@ class Board:
         if len(self.MOVE_HISTORY) == 0:
             return
         last = self.MOVE_HISTORY.pop()
-        # self.STATE_HISTORY[getBoardStr(self)]-=1 #might be replaced with hash function later
-        
+        self.STATE_HISTORY[self.hash] -= 1
         for type, value in last:
             if type =='P':
                 self.WP = value
@@ -1359,7 +1398,8 @@ class Board:
         
     def evaluate(self, isMax):
         if self.game_done == 0:
-            return self.evaluateNN().item() if isMax else - self.evaluateNN().item()
+            score = round(self.evaluateNN().item(),1)
+            return score if isMax else -score
         if self.game_done > 0:
             return self.evaluateDone() if isMax else - self.evaluateDone()
         print("typeNr of evaluation has to be an integer between 0 and 3 (inkl.)!")
@@ -1514,9 +1554,9 @@ class Board:
         return self.halfmoveClock >= 100
 
     def is3Fold(self):
-        # for key in self.STATE_HISTORY:
-        #     if self.STATE_HISTORY[key] >= 3:
-        #         return True
+        for key in self.STATE_HISTORY:
+            if self.STATE_HISTORY[key] >= 3:
+                return True
         return False
 
     def didOpponentWin(self, opponentIsWhite):

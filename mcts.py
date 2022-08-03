@@ -75,7 +75,7 @@ class MCTS:
 
         while time() < endTime:
             promisingNode = self.selectPromisingNode(rootNode)
-            if promisingNode.state.board.isGameDone() > 0: 
+            if promisingNode.state.board.isGameDone() == 0: 
                 if promisingNode.state.isRoot and filterMoves:
                     self.expandNode(promisingNode, filterMoves)
                 else:
@@ -121,7 +121,7 @@ class MCTS:
             tempNode.parent.state.winScore = float('-inf')
             return self.OPPONENT
         
-        while board.isGameDone() > 0:
+        while board.isGameDone() == 0:
             tempState.randomPlay()
 
         winner = not tempState.board.isWhiteTurn

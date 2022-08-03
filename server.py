@@ -28,8 +28,9 @@ def alphabeta():
 @app.route('/mcts', methods=['POST'])
 @cross_origin()
 def mcts():
+    MOVES = request.json['moves']
     STOPTIME = int(request.json['stopTime'])
-    return state.mctsMove(STOPTIME) 
+    return state.mctsMove(MOVES, STOPTIME) 
 
 @app.route('/doMove', methods=['POST'])
 @cross_origin()
