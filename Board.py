@@ -32,6 +32,7 @@ class Board:
 
     hash = -1
     moves = []
+    best_moves = []
     MOVE_HISTORY = []
     STATE_HISTORY = {} #später transpostion table?
     zobTable = [[(randint(1,2**64 - 1)) for i in range(12)]for j in range(64)]
@@ -49,7 +50,7 @@ class Board:
     }
     ```
     """
-
+    
     isWhiteTurn = True
     castleRight = 15 #1111 default
     enPassant = "-"
@@ -1034,11 +1035,6 @@ class Board:
         undoMove.append(('enPassant', self.enPassant))
         self.enPassant = '-'
         self.MOVE_HISTORY.append(undoMove)
-        # boardString = getBoardStr(self) #might be replaced with hash function later
-        # if boardString in self.STATE_HISTORY:
-        #     self.STATE_HISTORY[boardString] += 1
-        # else:
-        #     self.STATE_HISTORY[boardString] = 1
 
     def doMoveHelper(self, move, BOARD, undoMove:array = None):
         if undoMove is not None:
@@ -1334,7 +1330,7 @@ class Board:
                 self.fullmoveCount = value
             elif type == 'halfmove':
                 self.halfmoveClock = value
-        self.isWhiteTurn = not self.isWhiteTurn        
+        self.isWhiteTurn = not self.isWhiteTurn
     
     def undoAllMoves(self):
         while len(self.MOVE_HISTORY) > 0:
@@ -1361,31 +1357,22 @@ class Board:
 #
 # //////////////////////////////////////////////////////
         
-    def evaluate(self):
-        value = 0
-        colorfactor = -1
-        if self.isWhiteTurn:
-            colorfactor = 1
-
-        pawns = 1*(countSetBits(self.WP) - countSetBits(self.BP))
-        knightsAndBishops = 3*(countSetBits(self.WN | self.WB) - countSetBits(self.BN | self.BB))
-        rooks = 5* (countSetBits(self.WR) - countSetBits(self.BR))
-        queens = 9 * (countSetBits(self.WQ) - countSetBits(self.BQ))
-        squarePieceBalance = colorfactor*(queens + rooks + knightsAndBishops + pawns)
-        
-        movesW = self.possibleMovesW()
-        movesB = self.possibleMovesB()
-        simpleMobility = colorfactor*(len(movesW) - len(movesB))
-        
-        value = squarePieceBalance + simpleMobility
-        
-        if self.isCheck(): value = -10
-        if self.isRemis(): value = -100
-        if self.isCheckMate(): value = -10000
-        if self.isKingOfTheHill(): value = 10000
-        
-        return value 
-        
+    def evaluate(self, isMax):
+        if self.game_done == 0:
+            return self.evaluateNN().item() if isMax else - self.evaluateNN().item()
+        if self.game_done > 0:
+            return self.evaluateDone() if isMax else - self.evaluateDone()
+        print("typeNr of evaluation has to be an integer between 0 and 3 (inkl.)!")
+        return 0 
+    
+    def evaluateDone(self):
+        if self.game_done == 1:
+            return 10
+        if self.game_done == 2:
+            return -10000
+        if self.game_done == 3:
+            return -10000
+    
     def evaluateNN(self):
         #layer = 4 - model_2-3 layer = 6 - model_2-22
         self.model.eval()
@@ -1484,7 +1471,22 @@ class Board:
 # //////////////////////////////////////////////////////
 
     def isGameDone(self):
-        return self.isCheckMate() or self.isKingOfTheHill() or self.isRemis()
+        """
+        Returns:
+            0 if not done,
+            1 if remis
+            2 if king of the hill
+            3 if checkmate
+        """
+        if self.isRemis():
+            self.game_done = 1
+        elif self.isKingOfTheHill():
+            self.game_done = 2
+        elif self.isCheckMate():
+            self.game_done = 3
+        else:
+            self.game_done = 0
+        return self.game_done
         
     def isCheck(self):
         K = self.BK
@@ -1496,9 +1498,10 @@ class Board:
         return len(self.getMoves()) == 0 and self.isCheck()
     
     def isKingOfTheHill(self):
-        K = self.BK
+        """checks if oponent is king of the hill"""
+        K = self.WK
         if (self.isWhiteTurn):
-            K = self.WK
+            K = self.BK
         return HILLS & K > 0
     
     def isRemis(self):
@@ -1508,7 +1511,7 @@ class Board:
         return len(self.getMoves()) == 0 and not self.isCheck()
         
     def is50Rule(self):
-        return self.halfmoveClock == 50 # or 100??
+        return self.halfmoveClock >= 100
 
     def is3Fold(self):
         # for key in self.STATE_HISTORY:
@@ -1517,4 +1520,4 @@ class Board:
         return False
 
     def didOpponentWin(self, opponentIsWhite):
-        return self.isGameDone() and not self.isWhiteTurn == opponentIsWhite
+        return self.isGameDone() > 0 and self.isWhiteTurn == opponentIsWhite

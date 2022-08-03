@@ -8,10 +8,15 @@ class State:
     visitCount:int = 0
     winScore:int = 0
     move:any
+    isRoot = False
     
-    def getAllPossibleStates(self):
+    def getAllPossibleStates(self, filterMoves:list = None):
         states = []
-        moves = self.board.getMoves()
+        if self.isRoot and filterMoves:
+            allMoves = self.board.getMoves()
+            moves = filter(lambda x: x['toString'] in filterMoves, allMoves)
+        else:    
+            moves = self.board.getMoves()
         for move in moves:
             self.board.doMove(move)
             state = State()
@@ -56,20 +61,26 @@ class Tree:
 
 class MCTS:
     WIN_SCORE = 10
-    UTC_CONSTANT = 1.41 # we need proper value
+    UCT_CONSTANT = 1.41
     OPPONENT:bool
 
-    def findNextMove(self, board:Board, endTime):
+    def findNextMove(self, board:Board, endTime, filterMoves:list = None):
         tree = Tree()
         self.OPPONENT = not board.isWhiteTurn
         rootNode = tree.node
         rootNode.player = board.isWhiteTurn
         rootNode.state.board = board
+        rootNode.state.isRoot = True
+        expansions = 0
 
         while time() < endTime:
             promisingNode = self.selectPromisingNode(rootNode)
             if not promisingNode.state.board.isGameDone(): 
-                self.expandNode(promisingNode)
+                if promisingNode.state.isRoot and filterMoves:
+                    self.expandNode(promisingNode, filterMoves)
+                else:
+                    self.expandNode(promisingNode)
+                expansions+=1
             
             nodeToExplore = promisingNode
             if len(promisingNode.children) > 0 :
@@ -79,6 +90,8 @@ class MCTS:
             self.backPropogation(nodeToExplore, playoutResult)
 
         winnerNode:Node = rootNode.getChildWithMaxScore()
+        print("visitCounts/simulations: "+str(rootNode.state.visitCount)+ " || expansions: "+str(expansions))
+        rootNode.children.clear()
         tree.node = winnerNode
         return (winnerNode.state.move, winnerNode.state.winScore)
 
@@ -90,8 +103,8 @@ class MCTS:
         return node
 
     ## EXPANSION
-    def expandNode(self, node:Node):
-        possibleStates:list[State] = node.state.getAllPossibleStates()
+    def expandNode(self, node:Node, filterMoves:list = None):
+        possibleStates:list[State] = node.state.getAllPossibleStates(filterMoves)
         for state in possibleStates:
             newNode = Node(state)
             newNode.parent = node
@@ -128,18 +141,14 @@ class MCTS:
             else:
                 break
 
-    ## UTC
+    ## UCT
     def uctValue(self, totalVisit, nodeWinScore, nodeVisit, ):
         if nodeVisit == 0: 
             return float('inf')
-        return (nodeWinScore /nodeVisit) + self.UTC_CONSTANT * math.sqrt(math.log(totalVisit) /nodeVisit)
+        return (nodeWinScore /nodeVisit) + self.UCT_CONSTANT * math.sqrt(math.log(totalVisit) /nodeVisit)
     
 
     def findBestNodeWithUCT(self,  node:Node):
         parentVisit = node.state.visitCount
         return max(node.children,key=lambda x: self.uctValue(parentVisit, x.state.winScore, x.state.visitCount) )
     
-
-
-
-
