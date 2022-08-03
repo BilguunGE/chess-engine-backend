@@ -21,7 +21,7 @@ class GameState:
         print("Executing alpha beta")
         self.current_board.best_moves = []
         start = time()
-        value = alphaBeta(self.current_board, depth, ALPHA_START-1, BETA_START+1, 1, 1, stopTime)
+        value = alphaBeta(self.current_board, depth, ALPHA_START, BETA_START, 1, 1, stopTime)
         print("Depth "+str(depth) + " took " + str(time()-start) + " seconds")
         return { "moves" : self.current_board.best_moves, "value": value, "depth":depth }
     
