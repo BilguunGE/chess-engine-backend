@@ -53,7 +53,8 @@ def alphaBeta(board: Board, depth, alpha, beta, isMax, shouldSave, stopTime, cou
             board.undoLastMove()
             if value >= beta:
                 break
-        board.ttable[hash] = { "score" : value, "depth" : depth, "moves" : best_moves }
+        if not isTimeUp(stopTime):
+            board.ttable[hash] = { "score" : value, "depth" : depth, "moves" : best_moves }
         if shouldSave:
             board.best_moves = best_moves
         return value
@@ -71,7 +72,8 @@ def alphaBeta(board: Board, depth, alpha, beta, isMax, shouldSave, stopTime, cou
             board.undoLastMove()
             if value <= alpha:
                 break
-        board.ttable[hash] = { "score" : value, "depth" : depth, "moves" : best_moves }
+        if not isTimeUp(stopTime):
+            board.ttable[hash] = { "score" : value, "depth" : depth, "moves" : best_moves }
         return value
 
 def alphaBetaNoHash(board: Board, depth, alpha, beta, isMax, shouldSave, counter={"count":0}):

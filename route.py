@@ -26,16 +26,21 @@ class GameState:
         return { "moves" : self.current_board.best_moves, "value": value, "depth":depth }
     
     
-    def mctsMove(self, moves, stopTime):
+    def mctsMove(self, stopTime, moves=None):
         print("Executing MCTS")
-        moveCount = len(moves)
-        if (moveCount <= 0):
-            return {"info": "no best moves available"}
-        elif (moveCount == 1):
-            return {"move": moves[0]}
-        elif moveCount > 1:         
-            move = MCTS().findNextMove(self.current_board, stopTime/1000, moves)
+        if not (moves is None):
+            moveCount = len(moves)
+            if (moveCount <= 0):
+                return {"info": "no best moves available"}
+            elif (moveCount == 1):
+                return {"move": moves[0]}
+            elif moveCount > 1:         
+                move = MCTS().findNextMove(self.current_board, stopTime/1000, moves)
+                return { "move" : move[0] }
+        else:
+            move = MCTS().findNextMove(self.current_board, stopTime/1000)
             return { "move" : move[0] }
+            
     
     def doMove(self, move):
         self.current_board.doMove(move)
