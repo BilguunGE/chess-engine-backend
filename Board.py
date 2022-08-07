@@ -1396,21 +1396,21 @@ class Board:
 #
 # //////////////////////////////////////////////////////
         
-    def evaluate(self, isMax):
-        if self.game_done == 0:
+    def evaluate(self, isMax, gameDone):
+        if gameDone == 0:
             score = round(self.evaluateNN().item(),1)
             return score if isMax else -score
-        if self.game_done > 0:
+        if gameDone > 0:
             return self.evaluateDone() if isMax else - self.evaluateDone()
         print("typeNr of evaluation has to be an integer between 0 and 3 (inkl.)!")
         return 0 
     
-    def evaluateDone(self):
-        if self.game_done == 1:
+    def evaluateDone(self, gameDone):
+        if gameDone == 1:
             return 10
-        if self.game_done == 2:
+        if gameDone == 2:
             return -10000
-        if self.game_done == 3:
+        if gameDone == 3:
             return -10000
     
     def evaluateNN(self):

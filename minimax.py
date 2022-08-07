@@ -35,9 +35,9 @@ def alphaBeta(board: Board, depth, alpha, beta, isMax, shouldSave, stopTime, cou
                 board.best_moves = best_moves
             return score
     moves = board.getMoves()
-    isGameDone = board.isGameDone() > 0
-    if (depth == 0) or isGameDone or isTimeUp(stopTime):
-        return board.evaluate(isMax)
+    gameDone = board.isGameDone()
+    if (depth == 0) or gameDone  > 0 or isTimeUp(stopTime):
+        return board.evaluate(isMax, gameDone)
     best_moves = []
     if isMax:
         value = alpha

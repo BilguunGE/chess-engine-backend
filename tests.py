@@ -24,12 +24,13 @@ def testMoveGenSpeed(board, iterations):
 def testEvaluationSpeed(board, iterations):
     i = 0 
     list =[]
+    gameDone = board.isGameDone() 
     while i < iterations:
         start = time()
-        board.evaluate()
+        board.evaluate(1,gameDone)
         list.append(time()-start)
         i+=1
-    print(sum(list)/1000)
+    print((sum(list)/iterations)*1000, board.evaluate(1,gameDone))
     
 def testNNEvaluationSpeed(board, iterations):
     i = 0 
@@ -140,8 +141,7 @@ def moveTest():
     print('All right')
     
 def mctsTest(board):
-    moves = list(map(getMoveToString, board.getMoves()))
-    move, score  = MCTS().findNextMove(board, time()+5, moves)
+    move, score  = MCTS().findNextMove(board, time()+5)
     print(move.get('toString'))
     
 def testHist(board):
@@ -190,7 +190,7 @@ def mst3(boards, maxDepth, iterations):
             while i < iterations:
                 board.best_moves.clear()
                 start = time()
-                value = alphaBeta(board, depth, -10000, 10000, 1, 1, time()*1000+120000,0,stateCount )
+                value = alphaBeta(board, depth, -10000, 10000, 1, 1, time()*1000+120000,stateCount)
                 # value = alphaBetaNoHash(board, depth, -10000, 10000, 1, 1, stateCount)
                 timeList.append(time()-start)
                 valueList.append(value)
@@ -230,5 +230,7 @@ firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 # //////////////////////////////////////////////////////
 
 start = time()
+
+mctsTest(midGame)
 
 print(f"\nTest took {time() - start} seconds.\n")
