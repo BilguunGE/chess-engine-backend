@@ -11,68 +11,69 @@ import bitarray
 
 
 class Board:
-    WP = 0
-    WN = 0
-    WB = 0
-    WR = 0
-    WQ = 0
-    WK = 0
-    BP = 0
-    BN = 0
-    BB = 0
-    BR = 0
-    BQ = 0
-    BK = 0
-    
-    MY_PIECES = 0
-    NOT_MY_PIECES =  0
-
-    EMPTY = 0
-    OCCUPIED = 0
-
-    hash = -1
-    moves = []
-    MOVE_HISTORY = []
-    STATE_HISTORY = {} #später transpostion table?
-    zobTable = [[(randint(1,2**64 - 1)) for i in range(12)]for j in range(64)]
-    zobEnPass = [(randint(1,2**64 - 1)) for i in range(8)]
-    zobCastle = [(randint(1,2**64 - 1)) for i in range(4)]
-    zobTurn = (randint(1,2**64 - 1))
-    ttable = {} 
-    """
-    Table entries with form:
-    ```
-    12345678738627 : {
-            "score": 123,
-            "depth": 3,
-            "move" : moveObject,
-    }
-    ```
-    """
-
-    isWhiteTurn = True
-    castleRight = 15 #1111 default
-    enPassant = "-"
-    halfmoveClock = 0
-    fullmoveCount = 1
-    chessBoard = [
-        ["r", "n", "b", "q", "k", "b", "n", "r"],
-        ["p", "p", "p", "p", "p", "p", "p", "p"],
-        ["", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "", ""],
-        ["P", "P", "P", "P", "P", "P", "P", "P"],
-        ["R", "N", "B", "Q", "K", "B", "N", "R"],
-    ]
-
-    model = EvaluationModel(layer_count=4,batch_size=1024,learning_rate=1e-3)
-
     def __init__(self, fenString=None):
+        self.WP = 0
+        self.WN = 0
+        self.WB = 0
+        self.WR = 0
+        self.WQ = 0
+        self.WK = 0
+        self.BP = 0
+        self.BN = 0
+        self.BB = 0
+        self.BR = 0
+        self.BQ = 0
+        self.BK = 0
+
+        self.MY_PIECES = 0
+        self.NOT_MY_PIECES =  0
+
+        self.EMPTY = 0
+        self.OCCUPIED = 0
+
+        self.hash = -1
+        self.moves = []
+        self.best_moves = []
+        self.MOVE_HISTORY = []
+        self.STATE_HISTORY = {}
+        self.zobTable = [[(randint(1,2**64 - 1)) for i in range(12)]for j in range(64)]
+        self.zobEnPass = [(randint(1,2**64 - 1)) for i in range(8)]
+        self.zobCastle = [(randint(1,2**64 - 1)) for i in range(4)]
+        self.zobTurn = (randint(1,2**64 - 1))
+        self.ttable = {} 
+        """
+        Table entries with form:
+        ```
+        12345678738627 : {
+                "score": 123,
+                "depth": 3,
+                "move" : moveObject,
+        }
+        ```
+        """
+
+        self.isWhiteTurn = True
+        self.castleRight = 15 #1111 default
+        self.enPassant = "-"
+        self.halfmoveClock = 0
+        self.fullmoveCount = 1
+        self.chessBoard = [
+            ["r", "n", "b", "q", "k", "b", "n", "r"],
+            ["p", "p", "p", "p", "p", "p", "p", "p"],
+            ["", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", "", ""],
+            ["P", "P", "P", "P", "P", "P", "P", "P"],
+            ["R", "N", "B", "Q", "K", "B", "N", "R"],
+        ]
+
+        self.model = EvaluationModel(layer_count=4,batch_size=1024,learning_rate=1e-3)
         self.fenString = fenString
         self.initBoard()
         self.convertArraysToBitboards()
-        self.genZobHash()
+        self.genHistHash()
+        self.STATE_HISTORY[self.hash] = 1
         self.model.load_state_dict(torch.load('models/model_2-3.pt'))
 
     def initBoard(self):
@@ -236,9 +237,37 @@ class Board:
             hash ^= self.zobCastle[3]  
         if not self.isWhiteTurn:
             hash ^= self.zobTurn
-
-        self.hash = hash
         return hash
+    
+    def genHistHash(self):
+        hash = 0
+        for i in range(64):
+            if (self.WP >> i) & 1 == 1:
+                hash ^= self.zobTable[i][0]
+            elif (self.BP >> i) & 1 == 1:
+                hash ^= self.zobTable[i][1]
+            elif (self.WN >> i) & 1 == 1:
+                hash ^= self.zobTable[i][2]
+            elif (self.BN >> i) & 1 == 1:
+                hash ^= self.zobTable[i][3]
+            elif (self.WB >> i) & 1 == 1:
+                hash ^= self.zobTable[i][4]
+            elif (self.BB >> i) & 1 == 1:
+                hash ^= self.zobTable[i][5]
+            elif (self.WR >> i) & 1 == 1:
+                hash ^= self.zobTable[i][6]
+            elif (self.BR >> i) & 1 == 1:
+                hash ^= self.zobTable[i][7]
+            elif (self.WQ >> i) & 1 == 1:
+                hash ^= self.zobTable[i][8]
+            elif (self.BQ >> i) & 1 == 1:
+                hash ^= self.zobTable[i][9]
+            elif (self.WK >> i) & 1 == 1:
+                hash ^= self.zobTable[i][10]
+            elif (self.BK >> i) & 1 == 1:
+                hash ^= self.zobTable[i][11]
+        self.hash = hash
+        
     
     def getFEN(self):
         rows = []
@@ -1034,11 +1063,10 @@ class Board:
         undoMove.append(('enPassant', self.enPassant))
         self.enPassant = '-'
         self.MOVE_HISTORY.append(undoMove)
-        # boardString = getBoardStr(self) #might be replaced with hash function later
-        # if boardString in self.STATE_HISTORY:
-        #     self.STATE_HISTORY[boardString] += 1
-        # else:
-        #     self.STATE_HISTORY[boardString] = 1
+        if self.hash in self.STATE_HISTORY:
+            self.STATE_HISTORY[self.hash] += 1
+        else:
+            self.STATE_HISTORY[self.hash] = 1
 
     def doMoveHelper(self, move, BOARD, undoMove:array = None):
         if undoMove is not None:
@@ -1128,6 +1156,10 @@ class Board:
         self.isWhiteTurn = not self.isWhiteTurn
         self.enPassant = '-'
         self.MOVE_HISTORY.append(undoMove)
+        if self.hash in self.STATE_HISTORY:
+            self.STATE_HISTORY[self.hash] += 1
+        else:
+            self.STATE_HISTORY[self.hash] = 1
 
     def doMovePawn(self, move):
         undoMove = []
@@ -1217,6 +1249,10 @@ class Board:
         self.halfmoveClock = 0
         self.isWhiteTurn = not self.isWhiteTurn
         self.MOVE_HISTORY.append(undoMove)
+        if self.hash in self.STATE_HISTORY:
+            self.STATE_HISTORY[self.hash] += 1
+        else:
+            self.STATE_HISTORY[self.hash] = 1
 
     def updateHash(self, move, value, undoMove:array):
         start = move['from']
@@ -1297,8 +1333,7 @@ class Board:
         if len(self.MOVE_HISTORY) == 0:
             return
         last = self.MOVE_HISTORY.pop()
-        # self.STATE_HISTORY[getBoardStr(self)]-=1 #might be replaced with hash function later
-        
+        self.STATE_HISTORY[self.hash] -= 1
         for type, value in last:
             if type =='P':
                 self.WP = value
@@ -1334,7 +1369,7 @@ class Board:
                 self.fullmoveCount = value
             elif type == 'halfmove':
                 self.halfmoveClock = value
-        self.isWhiteTurn = not self.isWhiteTurn        
+        self.isWhiteTurn = not self.isWhiteTurn
     
     def undoAllMoves(self):
         while len(self.MOVE_HISTORY) > 0:
@@ -1361,31 +1396,23 @@ class Board:
 #
 # //////////////////////////////////////////////////////
         
-    def evaluate(self):
-        value = 0
-        colorfactor = -1
-        if self.isWhiteTurn:
-            colorfactor = 1
-
-        pawns = 1*(countSetBits(self.WP) - countSetBits(self.BP))
-        knightsAndBishops = 3*(countSetBits(self.WN | self.WB) - countSetBits(self.BN | self.BB))
-        rooks = 5* (countSetBits(self.WR) - countSetBits(self.BR))
-        queens = 9 * (countSetBits(self.WQ) - countSetBits(self.BQ))
-        squarePieceBalance = colorfactor*(queens + rooks + knightsAndBishops + pawns)
-        
-        movesW = self.possibleMovesW()
-        movesB = self.possibleMovesB()
-        simpleMobility = colorfactor*(len(movesW) - len(movesB))
-        
-        value = squarePieceBalance + simpleMobility
-        
-        if self.isCheck(): value = -10
-        if self.isRemis(): value = -100
-        if self.isCheckMate(): value = -10000
-        if self.isKingOfTheHill(): value = 10000
-        
-        return value 
-        
+    def evaluate(self, isMax, gameDone):
+        if gameDone == 0:
+            score = round(self.evaluateNN().item(),1)
+            return score if isMax else -score
+        if gameDone > 0:
+            return self.evaluateDone() if isMax else - self.evaluateDone()
+        print("typeNr of evaluation has to be an integer between 0 and 3 (inkl.)!")
+        return 0 
+    
+    def evaluateDone(self, gameDone):
+        if gameDone == 1:
+            return 10
+        if gameDone == 2:
+            return -10000
+        if gameDone == 3:
+            return -10000
+    
     def evaluateNN(self):
         #layer = 4 - model_2-3 layer = 6 - model_2-22
         self.model.eval()
@@ -1484,7 +1511,22 @@ class Board:
 # //////////////////////////////////////////////////////
 
     def isGameDone(self):
-        return self.isCheckMate() or self.isKingOfTheHill() or self.isRemis()
+        """
+        Returns:
+            0 if not done,
+            1 if remis
+            2 if king of the hill
+            3 if checkmate
+        """
+        if self.isRemis():
+            self.game_done = 1
+        elif self.isKingOfTheHill():
+            self.game_done = 2
+        elif self.isCheckMate():
+            self.game_done = 3
+        else:
+            self.game_done = 0
+        return self.game_done
         
     def isCheck(self):
         K = self.BK
@@ -1496,9 +1538,10 @@ class Board:
         return len(self.getMoves()) == 0 and self.isCheck()
     
     def isKingOfTheHill(self):
-        K = self.BK
+        """checks if oponent is king of the hill"""
+        K = self.WK
         if (self.isWhiteTurn):
-            K = self.WK
+            K = self.BK
         return HILLS & K > 0
     
     def isRemis(self):
@@ -1508,13 +1551,13 @@ class Board:
         return len(self.getMoves()) == 0 and not self.isCheck()
         
     def is50Rule(self):
-        return self.halfmoveClock == 50 # or 100??
+        return self.halfmoveClock >= 100
 
     def is3Fold(self):
-        # for key in self.STATE_HISTORY:
-        #     if self.STATE_HISTORY[key] >= 3:
-        #         return True
+        for key in self.STATE_HISTORY:
+            if self.STATE_HISTORY[key] >= 3:
+                return True
         return False
 
     def didOpponentWin(self, opponentIsWhite):
-        return self.isGameDone() and not self.isWhiteTurn == opponentIsWhite
+        return self.isGameDone() > 0 and self.isWhiteTurn == opponentIsWhite

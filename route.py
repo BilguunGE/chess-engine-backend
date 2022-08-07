@@ -1,26 +1,52 @@
 from Board import *
 from helpers import *
-from algorithms import *
+from minimax import *
+from constants import *
+from mcts import MCTS
 
-current_board  = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+class GameState:    
+    def __init__(self): 
+        self.current_board = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
 
-def initBoard(fenString):
-    print("Executing initBoard")
-    global current_board
-    current_board = Board(fenString)
-    print("Initiated current_board: \n" + getBoardStr(current_board) + "\n("+fenString+")\n")
-    return {"board" : fenString}
+    def initBoard(self, fenString):
+        print("Executing initBoard")
+        self.current_board = Board(fenString)
+        print("Initiated game_state: \n" + getBoardStr(self.current_board) + "\n("+fenString+")\n")
+        return {"board" : fenString}
 
-def getMoves():
-    return {"moves" : list(map(getMoveToString, current_board.getMoves()))}
+    def getMoves(self):
+        return {"moves" : list(map(getMoveToString, self.current_board.getMoves()))}
 
-def alphaBetaMove(depth, alpha, beta, stopTime, useNN):
-    print("Executing alpha beta")
-    bestMoves.clear()
-    start = time()
-    alphaBeta(current_board,depth, alpha, beta, 1, 1, stopTime, useNN)
-    print("Depth "+str(depth) + " took " + str(time()-start) + " seconds")
-    printBestMoves(bestMoves)
-    bestMove = pickRandomBest(bestMoves)
-    return { "move" : bestMove["move"]["toString"], "value": bestMove["value"], "depth":depth }
+    def alphaBetaMove(self, depth, stopTime):
+        print("Executing alpha beta")
+        self.current_board.best_moves = []
+        start = time()
+        value = alphaBeta(self.current_board, depth, ALPHA_START, BETA_START, 1, 1, stopTime)
+        print("Depth "+str(depth) + " took " + str(time()-start) + " seconds")
+        return { "moves" : self.current_board.best_moves, "value": value, "depth":depth }
+    
+    
+    def mctsMove(self, stopTime, moves=None):
+        print("Executing MCTS")
+        if not (moves is None):
+            moveCount = len(moves)
+            if (moveCount <= 0):
+                return {"info": "no best moves available"}
+            elif (moveCount == 1):
+                return {"move": moves[0]}
+            elif moveCount > 1:         
+                move = MCTS().findNextMove(self.current_board, stopTime/1000, moves)
+                return { "move" : move[0] }
+        else:
+            move = MCTS().findNextMove(self.current_board, stopTime/1000)
+            return { "move" : move[0] }
+            
+    
+    def doMove(self, move):
+        self.current_board.doMove(move)
+        return {"board": self.current_board.getFEN()}   
+    
+    def undoLastMove(self):
+        self.current_board.undoLastMove()
+        return {"board": self.current_board.getFEN()}   
     

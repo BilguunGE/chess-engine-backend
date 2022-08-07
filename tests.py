@@ -1,7 +1,7 @@
 from time import time
 from Board import *
 from helpers import *
-from algorithms import *
+from minimax import *
 import json
 from mcts import MCTS
 
@@ -24,12 +24,13 @@ def testMoveGenSpeed(board, iterations):
 def testEvaluationSpeed(board, iterations):
     i = 0 
     list =[]
+    gameDone = board.isGameDone() 
     while i < iterations:
         start = time()
-        board.evaluate()
+        board.evaluate(1,gameDone)
         list.append(time()-start)
         i+=1
-    print(sum(list)/1000)
+    print((sum(list)/iterations)*1000, board.evaluate(1,gameDone))
     
 def testNNEvaluationSpeed(board, iterations):
     i = 0 
@@ -139,6 +140,37 @@ def moveTest():
                     return (newFEN, move)
     print('All right')
     
+def mctsTest(board):
+    move, score  = MCTS().findNextMove(board, time()+5)
+    print(move.get('toString'))
+    
+def testHist(board):
+    moves = board.getMoves()
+    print(board.STATE_HISTORY)
+    board.doMove(moves[0])
+    print(board.STATE_HISTORY)
+    board.undoLastMove()
+    print(board.STATE_HISTORY)
+    
+def testFirstOnHillHist(board):
+    
+    i = 0
+    while i < 3:
+        board.doMove({'toString': 'Kb2a3', 'from': 49, 'to': 40, 'type': 'K', 'score': 0})
+        board.doMove({'toString': 'Kg7f8', 'from': 14, 'to': 5, 'type': 'k', 'score': 0})
+        board.doMove({'toString': 'Ka3b2', 'from': 40, 'to': 49, 'type': 'K', 'score': 0})
+        board.doMove({'toString': 'Kf8g7', 'from': 5, 'to': 14, 'type': 'k', 'score': 0})
+        print(board.STATE_HISTORY)
+        print(board.is3Fold())
+        i += 1
+    board.undoAllMoves()
+    print(board.STATE_HISTORY)
+    print(board.is3Fold())
+    
+    
+    
+    
+    
 # //////////////////////////////////////////////////////
 #
 #                Project Benchmarks
@@ -156,10 +188,10 @@ def mst3(boards, maxDepth, iterations):
             state_countList = []
             stateCount = {"count":0}
             while i < iterations:
-                bestMoves.clear()
+                board.best_moves.clear()
                 start = time()
-                # value = alphaBeta(board, depth, -10000, 10000, 1, 1, time()*1000+120000,0,stateCount )
-                value = alphaBetaNoHash(board, depth, -10000, 10000, 1, 1, stateCount)
+                value = alphaBeta(board, depth, -10000, 10000, 1, 1, time()*1000+120000,stateCount)
+                # value = alphaBetaNoHash(board, depth, -10000, 10000, 1, 1, stateCount)
                 timeList.append(time()-start)
                 valueList.append(value)
                 state_countList.append(stateCount["count"])
@@ -169,7 +201,7 @@ def mst3(boards, maxDepth, iterations):
             avgStates = sum(state_countList)/iterations
             print(f"""
 Search depth {depth}:
-  -       Best moves: {getBestMoves(bestMoves)}
+  -       Best moves: {board.best_moves}
   -    Average value: {sum(valueList)/iterations}
   -     Average time: {avgTime} ms
   - Generated states: {avgStates} states
@@ -188,6 +220,7 @@ Search depth {depth}:
 startGame = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
 midGame = Board('r1br2k1/pppp1pp1/7p/2b1p3/2Pn4/4QN2/PP2PPBP/RN3RK1 w - - 0 1')
 endGame = Board('8/p3k3/5N2/4P3/8/B7/8/K7 b - - 0 1')
+finalMoveGame = Board("6Bk/Q7/8/8/8/3K4/8/8 w - - 0 1")
 firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 
 # //////////////////////////////////////////////////////
@@ -198,11 +231,6 @@ firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 
 start = time()
 
-# mst3([startGame,midGame,endGame],3, 10)
-# print(testMoveGenSpeed(startGame,10000))
-# simpleTest()
-# moveTest()
-move = MCTS().findNextMove(endGame, start+20)
-print(move)
-# print(midGame.getMoves())
+mctsTest(midGame)
+
 print(f"\nTest took {time() - start} seconds.\n")

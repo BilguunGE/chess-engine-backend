@@ -47,6 +47,12 @@ def castleStrToArr(str):
             result[3] = True
     return result
 
+def printTTable(board):
+    result = ""
+    for k in board.ttable:
+        result += f"{k} {board.ttable[k]}\n"
+    print(result)
+
 def printMoves(moves):
     result = ""
     for move in moves:
