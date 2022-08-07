@@ -143,6 +143,30 @@ def mctsTest(board):
     moves = list(map(getMoveToString, board.getMoves()))
     move, score  = MCTS().findNextMove(board, time()+5, moves)
     print(move.get('toString'))
+
+def mctsBenchmarkTest(board, iterations, boardName):
+    expansions = 0
+    for i in range(iterations):
+        start = time()
+        end = start + 1
+        move, stats = MCTS().findNextMove(board, end)
+        expansions+= stats.get('expansions')
+
+    print(boardName)
+    print('iterations: '+str(iterations))
+    print('avg expansions: '+str(expansions/iterations)+'/s')
+
+def mctsQualityTest(board, iterations, timeInSec):
+    moves = {}
+    for i in range(iterations):
+        start = time()
+        end = start + timeInSec
+        move, stats = MCTS().findNextMove(board, end)
+        if move['toString'] in moves:
+            moves[move['toString']] +=1
+        else:
+            moves[move['toString']] =1
+    print(moves)
     
 def testHist(board):
     moves = board.getMoves()
@@ -221,7 +245,7 @@ startGame = Board('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
 midGame = Board('r1br2k1/pppp1pp1/7p/2b1p3/2Pn4/4QN2/PP2PPBP/RN3RK1 w - - 0 1')
 endGame = Board('8/p3k3/5N2/4P3/8/B7/8/K7 b - - 0 1')
 finalMoveGame = Board("6Bk/Q7/8/8/8/3K4/8/8 w - - 0 1")
-firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
+firstOnTheHill  = Board('7k/p6p/1p6/8/8/B7/B7/7K w - - 0 1')
 
 # //////////////////////////////////////////////////////
 #
@@ -230,5 +254,5 @@ firstOnTheHill  = Board('8/6k1/8/8/8/8/1K6/8 w - - 0 1')
 # //////////////////////////////////////////////////////
 
 start = time()
-
+mctsQualityTest(firstOnTheHill, 20, 20)
 print(f"\nTest took {time() - start} seconds.\n")

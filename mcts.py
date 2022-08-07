@@ -80,7 +80,6 @@ class MCTS:
                     self.expandNode(promisingNode, filterMoves)
                 else:
                     self.expandNode(promisingNode)
-                expansions+=1
             
             nodeToExplore = promisingNode
             if len(promisingNode.children) > 0 :
@@ -90,10 +89,10 @@ class MCTS:
             self.backPropogation(nodeToExplore, playoutResult)
 
         winnerNode:Node = rootNode.getChildWithMaxScore()
-        print("visitCounts/simulations: "+str(rootNode.state.visitCount)+ " || expansions: "+str(expansions))
+        stats = {"winScore":winnerNode.state.winScore, "expansions":rootNode.state.visitCount}
         rootNode.children.clear()
         tree.node = winnerNode
-        return (winnerNode.state.move, winnerNode.state.winScore)
+        return (winnerNode.state.move, stats)
 
 
     ## SELECTION
